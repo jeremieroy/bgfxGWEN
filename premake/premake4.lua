@@ -36,9 +36,34 @@ end
 dofile (BGFX_DIR .. "premake/bgfx.lua")
 
 
-
 -- gwen static project
+
+project "GWEN_Static"
+	defines { "GWEN_COMPILE_STATIC" }
+	includedirs { GWEN_DIR .. "gwen/include/" }
+	files { GWEN_DIR .. "gwen/src/**.*", GWEN_DIR .. "gwen/include/Gwen/**.*" }
+	flags { "Symbols" }
+	kind "StaticLib"	
+
+project "GWEN_UnitTest"
+	includedirs { GWEN_DIR .. "gwen/include/" }
+	files { GWEN_DIR .. "gwen/UnitTest/**.*" }
+	flags { "Symbols" }
+	kind "StaticLib"
+
 -- bgfxGwenRenderer project
+project ( "bgfxGwenRenderer" )
+	files( "../Renderer/**.*" )
+	flags( { "Symbols" } )
+	kind( "StaticLib" )
+
+-- bgfxGwenRenderer sample
+project ( "bgfxGwenRenderer" )
+	files( "../Renderer/**.*" )
+	flags( { "Symbols" } )
+	kind( "StaticLib" )
+	links { "GWEN_UnitTest", "bgfxGwenRenderer", "GWEN_Static" } --, "FreeImage", "opengl32" } 
+	
 
 function exampleProject(_name, _uuid)
 
