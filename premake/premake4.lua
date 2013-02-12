@@ -53,17 +53,18 @@ project "GWEN_UnitTest"
 
 -- bgfxGwenRenderer project
 project ( "bgfxGwenRenderer" )
+	includedirs { GWEN_DIR .. "gwen/include/" , BX_DIR .. "include", BGFX_DIR .. "include" }
 	files( "../Renderer/**.*" )
 	flags( { "Symbols" } )
-	kind( "StaticLib" )
+	kind( "StaticLib" )	
 
--- bgfxGwenRenderer sample
-project ( "bgfxGwenRenderer" )
-	files( "../Renderer/**.*" )
+-- bgfxGwenSample project
+project ( "bgfxGwenSample" )
+	includedirs { GWEN_DIR .. "gwen/include/" , BX_DIR .. "include", BGFX_DIR .. "include" }
+	files( "../Sample/**.*" )
 	flags( { "Symbols" } )
 	kind( "StaticLib" )
-	links { "GWEN_UnitTest", "bgfxGwenRenderer", "GWEN_Static" } --, "FreeImage", "opengl32" } 
-	
+	links { "bgfx", "GWEN_UnitTest", "bgfxGwenRenderer", "GWEN_Static" } --, "FreeImage", "opengl32" } 	
 
 function exampleProject(_name, _uuid)
 
