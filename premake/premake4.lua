@@ -9,6 +9,8 @@ ENV_DIR = "../_env/"
 BIN_DIR = "../_bin/"
 BUILD_DIR = "../_build/"
 
+INPUT_SHADERS_DIR = "../shaders/"
+
 solution "bgfxGWEN"
 configurations {
 		"Debug",
@@ -30,8 +32,31 @@ local BGFX_BUILD_DIR = BUILD_DIR
 local BGFX_THIRD_PARTY_DIR = (BGFX_DIR .. "3rdparty/")
 toolchain(BGFX_BUILD_DIR, BGFX_THIRD_PARTY_DIR)
 
+function compileShader(_name, _type, _platform)
+	local inputShaderPath = path.getabsolute(INPUT_SHADERS_DIR) .. "/" .. _name .. ".sc"
+	local outputShaderPath = path.getabsolute(ENV_DIR .. "shaders/" .. _platform .. "/" .. _name .. ".bin")
+	local varyingPath = path.getabsolute(BGFX_DIR) .. "/src/varying.def.sc"
+	local cmd = path.getabsolute(BGFX_DIR) .. "/tools/bin/shaderc.exe -f " .. inputShaderPath .. " -o " .. outputShaderPath .. " --type " .. _type .. " --platform " .. _platform .. " --varyingdef " .. varyingPath .." -p ps_3_0"
+	os.execute("echo " .. cmd)
+	os.execute(cmd)
+end
+
+function makeShaders()
+	os.mkdir(ENV_DIR)
+	os.mkdir(ENV_DIR .. "shaders")
+	os.mkdir(ENV_DIR .. "shaders/windows")
+	-- ensure bgfx shaders are present
+	os.copyfile(BGFX_DIR .."src/common.sh", INPUT_SHADERS_DIR .. "common.sh")
+	os.copyfile(BGFX_DIR .."src/bgfx_shader.sh", INPUT_SHADERS_DIR .. "bgfx_shader.sh")
+	compileShader("vs_gwen" , "v", "windows")
+	--compileShader("fs_gwen_flat" , "fragment", "windows")
+	--compileShader("fs_gwen_textured" , "fragment", "windows")
+end
+
 function copyLib()
 end
+
+makeShaders()
 
 dofile (BGFX_DIR .. "premake/bgfx.lua")
 
@@ -58,13 +83,7 @@ project ( "bgfxGwenRenderer" )
 	flags( { "Symbols" } )
 	kind( "StaticLib" )	
 
--- bgfxGwenSample project
-project ( "bgfxGwenSample" )
-	includedirs { GWEN_DIR .. "gwen/include/" , BX_DIR .. "include", BGFX_DIR .. "include" }
-	files( "../Sample/**.*" )
-	flags( { "Symbols" } )
-	kind( "StaticLib" )
-	links { "bgfx", "GWEN_UnitTest", "bgfxGwenRenderer", "GWEN_Static" } --, "FreeImage", "opengl32" } 	
+
 
 function exampleProject(_name, _uuid)
 
@@ -126,4 +145,19 @@ function exampleProject(_name, _uuid)
 end
 
 -- bgfxGwenSample project
-exampleProject("01-cubes", "ff2c8450-ebf4-11e0-9572-0800200c9a66")
+--exampleProject("01-cubes", "ff2c8450-ebf4-11e0-9572-0800200c9a66")
+
+
+-- bgfxGwenSample project
+exampleProject("bgfxGwenSample", "ff2c8450-ebf4-11e0-9572-0800200c9a66")
+configuration {}
+includedirs { BGFX_DIR .. "examples/", "../Renderer/", GWEN_DIR .. "gwen/include/" }
+files( "../Sample/**.*" )
+links { "GWEN_UnitTest", "bgfxGwenRenderer", "GWEN_Static" } --, "FreeImage"} 	
+
+--project ( "bgfxGwenSample" )
+	--includedirs { "../Renderer/", GWEN_DIR .. "gwen/include/" , BX_DIR .. "include", BGFX_DIR .. "include" }
+	--files( "../Sample/**.*" )
+	--flags( { "Symbols" } )
+	--kind( "WindowedApp" )
+	--links { "bgfx", "GWEN_UnitTest", "bgfxGwenRenderer", "GWEN_Static" } --, "FreeImage" } 	
