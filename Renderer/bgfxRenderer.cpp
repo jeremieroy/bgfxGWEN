@@ -19,28 +19,107 @@ namespace Gwen
 {
 	namespace Renderer
 	{
-		bgfx::bgfx()
+        
+        long int fsize(FILE* _file)
+        {
+	        long int pos = ftell(_file);
+	        fseek(_file, 0L, SEEK_END);
+	        long int size = ftell(_file);
+	        fseek(_file, pos, SEEK_SET);
+	        return size;
+        }
+
+        static const bgfx::Memory* load(const char* _filePath)
+        {
+	        FILE* file = fopen(_filePath, "rb");
+	        if (NULL != file)
+	        {
+		        uint32_t size = (uint32_t)fsize(file);
+		        const bgfx::Memory* mem = bgfx::alloc(size+1);
+		        size_t ignore = fread(mem->data, 1, size, file);
+		        BX_UNUSED(ignore);
+		        fclose(file);
+		        mem->data[mem->size-1] = '\0';
+		        return mem;
+	        }
+
+	        return NULL;
+        }
+
+		bgfxRenderer::bgfxRenderer(int viewID, const char* shaderPath, const char* texturePath)
+		{   
+			m_viewID = viewID;
+            m_shaderPath = shaderPath;
+            m_texturePath = texturePath;
+
+            m_verticesCount = 0;
+            m_width = 1280;
+	        m_height = 720;
+            m_currentTexture.idx = bgfx::invalidHandle;           
+
+            // Load vertex shader.
+            const bgfx::Memory* mem;
+	        mem = loadShader("vs_gwen");
+	        bgfx::VertexShaderHandle vs_gwen = bgfx::createVertexShader(mem);
+
+	        // Load fragment shader.
+	        mem = loadShader("fs_gwen_flat");
+	        bgfx::FragmentShaderHandle fs_gwen_flat = bgfx::createFragmentShader(mem);
+
+            mem = loadShader("fs_gwen_textured");
+	        bgfx::FragmentShaderHandle fs_gwen_textured = bgfx::createFragmentShader(mem);
+            
+            // Create program from shaders.
+        	m_flatProgram = bgfx::createProgram(vs_gwen, fs_gwen_flat);
+            m_texturedProgram = bgfx::createProgram(vs_gwen, fs_gwen_textured);
+            
+            // We can destroy vertex and fragment shader here since
+	        // their reference is kept inside bgfx after calling createProgram.
+	        // Vertex and fragment shader will be destroyed once program is
+	        // destroyed.
+            bgfx::destroyVertexShader(vs_gwen);
+	        bgfx::destroyFragmentShader(fs_gwen_flat);
+            bgfx::destroyFragmentShader(fs_gwen_textured);
+
+            //declare vertex format
+            m_posUVColorDecl.begin();
+	        m_posUVColorDecl.add(bgfx::Attrib::Position, 2, bgfx::AttribType::Float);
+            m_posUVColorDecl.add(bgfx::Attrib::TexCoord0, 2, bgfx::AttribType::Float);
+	        m_posUVColorDecl.add(bgfx::Attrib::Color0, 4, bgfx::AttribType::Uint8, true);
+	        m_posUVColorDecl.end();
+		}
+
+		bgfxRenderer::~bgfxRenderer()
 		{
+            bgfx::destroyProgram(m_flatProgram);
+            bgfx::destroyProgram(m_texturedProgram);
+		}
+
+        void bgfxRenderer::Init()
+        {
+        }
+
+		void bgfxRenderer::Begin()
+		{
+            //bgfx::setViewRect(0, 0, 0, width, height);
+            bgfx::setState(BGFX_STATE_BLEND_INV_SRC_ALPHA
+					|BGFX_STATE_ALPHA_TEST_GREATER
+					//|BGFX_STATE_DEPTH_TEST_LESS
+					);
+            //better kept outside ...
+            //float view[16];
+		    //float proj[16];
+		    // mtxLookAt(view, eye, at);
+		    //mtxProj(proj, 60.0f, 16.0f/9.0f, 0.1f, 100.0f);
+
+		    // Set view and projection matrix for view 0.
+		    //bgfx::setViewTransform(0, view, proj);
+
             /*
-			m_pD3D = NULL;
-			m_pDevice = pDevice;
-			m_iVertNum = 0;
-
-			for ( int i=0; i<MaxVerts; i++ )
-			{
-				m_pVerts[ i ].z = 0.5f;
-				m_pVerts[ i ].rhw = 1.0f;
-			}
+            glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+			glAlphaFunc( GL_GREATER, 1.0f );	
+			glEnable ( GL_BLEND );
             */
-		}
-
-		bgfx::~bgfx()
-		{
-
-		}
-
-		void bgfx::Begin()
-		{
             /*
 			m_pDevice->SetRenderState( D3DRS_ALPHABLENDENABLE, TRUE ); 
 			m_pDevice->SetRenderState( D3DRS_SRCBLEND, D3DBLEND_SRCALPHA );
@@ -65,71 +144,25 @@ namespace Gwen
 			m_pDevice->SetTextureStageState( 1, D3DTSS_COLOROP, D3DTOP_DISABLE );
             */
 		}
-/*
-		void bgfx::End()
+
+		void bgfxRenderer::End()
 		{
-			//Flush();
+			// Submit primitive for rendering to view 0.
+			Flush();
 		}
 
-
-		void bgfx::Flush()
+        void bgfxRenderer::SetDrawColor(Gwen::Color color)
 		{
-        
-			if ( m_iVertNum > 0 )
-			{
-				m_pDevice->SetFVF( D3DFVF_VERTEXFORMAT2D );
-				m_pDevice->DrawPrimitiveUP( D3DPT_TRIANGLELIST, m_iVertNum/3, &m_pVerts[0], sizeof(VertexFormat) );
-
-				m_iVertNum = 0;
-			}
-        
+            memcpy(&m_color, &color, 4);
 		}
 
-		void bgfx::AddVert( int x, int y )
+		void bgfxRenderer::DrawFilledRect( Gwen::Rect rect )
 		{
-    
-			if ( m_iVertNum >= MaxVerts-1 )
+			if ( m_currentTexture.idx != bgfx::invalidHandle )
 			{
 				Flush();
+				m_currentTexture.idx = bgfx::invalidHandle;
 			}
-
-			m_pVerts[ m_iVertNum ].x = (float)x;
-			m_pVerts[ m_iVertNum ].y = (float)y;
-			m_pVerts[ m_iVertNum ].color = m_Color;
-
-			m_iVertNum++;
-    
-		}
-
-		void bgfx::AddVert( int x, int y, float u, float v )
-		{
-
-			if ( m_iVertNum >= MaxVerts-1 )
-			{
-				Flush();
-			}
-
-			m_pVerts[ m_iVertNum ].x = -0.5f + (float)x;
-			m_pVerts[ m_iVertNum ].y = -0.5f + (float)y;
-			m_pVerts[ m_iVertNum ].u = u;
-			m_pVerts[ m_iVertNum ].v = v;
-
-			m_pVerts[ m_iVertNum ].color = m_Color;
-
-			m_iVertNum++;
-
-		}
-        */
-
-		void bgfx::DrawFilledRect( Gwen::Rect rect )
-		{
-            /*
-			if ( m_pCurrentTexture != NULL )
-			{
-				Flush();
-				m_pDevice->SetTexture( 0, NULL );
-				m_pCurrentTexture = NULL;
-			}	
 
 			Translate( rect );
 
@@ -140,17 +173,123 @@ namespace Gwen
 			AddVert( rect.x+rect.w, rect.y );
 			AddVert( rect.x+rect.w, rect.y+rect.h );
 			AddVert( rect.x, rect.y + rect.h );
-            */
-		}
+        }
 
-		void bgfx::SetDrawColor(Gwen::Color color)
+        void bgfxRenderer::StartClip()
 		{
-            /*
-			m_Color = D3DCOLOR_ARGB( color.a, color.r, color.g, color.b );
-            */
+            //state change
+			//Flush();
+            //const Gwen::Rect& rect = ClipRegion();
+            //uint16_t x = rect.x * Scale();
+            //uint16_t y = rect.y * Scale();
+            //uint16_t w = rect.w * Scale();
+            //uint16_t h = rect.h * Scale();
+            //bgfx::setViewRect(m_viewID, x, y, w, h);
 		}
 
-		void bgfx::LoadFont( Gwen::Font* font )
+		void bgfxRenderer::EndClip()
+		{
+
+            //state change
+			//Flush();
+            //bgfx::setViewRect(m_viewID, 0, 0, m_width, m_height);
+		}
+
+        void bgfxRenderer::LoadTexture( Gwen::Texture* pTexture )
+		{
+            //const wchar_t *wFileName = pTexture->name.GetUnicode().c_str();
+            const char* fileName = pTexture->name.c_str();
+
+            char filePath[512];
+	        strcpy(filePath, m_texturePath);
+	        strcat(filePath, fileName);
+            
+            const bgfx::Memory* mem;
+            mem = load(filePath);
+
+            //TODO support non DDS files
+
+            bgfx::TextureInfo info;
+	        bgfx::TextureHandle handle = bgfx::createTexture(mem, 0, &info);
+            memcpy(&pTexture->data, &handle, 2);
+
+            pTexture->width = info.width;
+            pTexture->height = info.height;     
+		}
+
+		void bgfxRenderer::FreeTexture( Gwen::Texture* pTexture )
+		{
+            bgfx::TextureHandle handle;
+            memcpy(&handle, &pTexture->data, 2);
+            bgfx::destroyTexture(handle);
+            pTexture->data = NULL;
+		}
+
+		void bgfxRenderer::DrawTexturedRect( Gwen::Texture* pTexture, Gwen::Rect rect, float u1, float v1, float u2, float v2 )
+		{
+
+            if ( m_currentTexture.idx != bgfx::invalidHandle )
+			{
+				Flush();
+				m_currentTexture.idx = bgfx::invalidHandle;
+			}
+
+            bgfx::TextureHandle handle;
+            memcpy(&handle, &pTexture->data, 2);
+
+            // Missing image, not loaded properly?
+            if(handle.idx == bgfx::invalidHandle)
+            {
+                return DrawMissingImage( rect );
+            }
+             
+			Translate( rect );
+            
+            if ( m_currentTexture.idx != handle.idx )
+			{
+				Flush();
+                m_currentTexture.idx = handle.idx;
+			}
+
+			AddVert( rect.x, rect.y,			u1, v1 );
+			AddVert( rect.x+rect.w, rect.y,		u2, v1 );
+			AddVert( rect.x, rect.y + rect.h,	u1, v2 );
+
+			AddVert( rect.x+rect.w, rect.y,		u2, v1 );
+			AddVert( rect.x+rect.w, rect.y+rect.h, u2, v2 );
+			AddVert( rect.x, rect.y + rect.h, u1, v2 );
+		}
+
+        //void bgfxRenderer::DrawMissingImage( Gwen::Rect pTargetRect )
+        //{
+        //}
+
+        Gwen::Color bgfxRenderer::PixelColour( Gwen::Texture* pTexture, unsigned int x, unsigned int y, const Gwen::Color& col_default )
+		{
+            //TODO implement
+            /*
+			IDirect3DTexture9* pImage = (IDirect3DTexture9*) pTexture->data;
+			if ( !pImage ) return col_default;
+
+			IDirect3DSurface9* pSurface = NULL;
+
+			if ( pImage->GetSurfaceLevel( 0, &pSurface ) != S_OK ) return col_default;
+			if ( !pSurface ) return col_default;
+
+			D3DLOCKED_RECT lockedRect;
+			pSurface->LockRect( &lockedRect, NULL, D3DLOCK_READONLY );
+			DWORD* pixels = (DWORD*)lockedRect.pBits;
+			D3DXCOLOR color = pixels[lockedRect.Pitch / sizeof(DWORD) * y + x];
+			pSurface->UnlockRect();
+
+			pSurface->Release();
+
+			return Gwen::Color( color.r*255, color.g*255, color.b*255, color.a*255 );
+            */
+             return Gwen::Color();
+		}
+
+		void bgfxRenderer::LoadFont( Gwen::Font* font )
 		{
             /*
 			m_FontList.push_back( font );
@@ -199,7 +338,7 @@ namespace Gwen
             */
 		}
 
-		void bgfx::FreeFont( Gwen::Font* pFont )
+		void bgfxRenderer::FreeFont( Gwen::Font* pFont )
 		{
             /*
 			m_FontList.remove( pFont );
@@ -220,7 +359,7 @@ namespace Gwen
 
 		}
 
-		void bgfx::RenderText( Gwen::Font* pFont, Gwen::Point pos, const Gwen::UnicodeString& text )
+		void bgfxRenderer::RenderText( Gwen::Font* pFont, Gwen::Point pos, const Gwen::UnicodeString& text )
 		{
             /*
 			Flush();
@@ -241,7 +380,7 @@ namespace Gwen
             */
 		}
 
-		Gwen::Point bgfx::MeasureText( Gwen::Font* pFont, const Gwen::UnicodeString& text )
+		Gwen::Point bgfxRenderer::MeasureText( Gwen::Font* pFont, const Gwen::UnicodeString& text )
 		{
             /*
 			// If the font doesn't exist, or the font size should be changed
@@ -274,123 +413,190 @@ namespace Gwen
 			return Gwen::Point( rct.right / Scale(), rct.bottom / Scale() );
             */
             return Gwen::Point();
+		}     
+
+//**************************************************************************************************
+//**************************************************************************************************
+//**************************************************************************************************
+
+        bool bgfxRenderer::InitializeContext( Gwen::WindowProvider* pWindow )
+		{
+            uint32_t width = 1280;
+	        uint32_t height = 720;
+	        uint32_t debug = BGFX_DEBUG_TEXT;
+
+	        bgfx::init();
+	        bgfx::reset(width, height);
+
+	        // Enable debug text.
+	        bgfx::setDebug(debug);
+
+	        // Set view 0 clear state.
+	        bgfx::setViewClear(0
+		        , BGFX_CLEAR_COLOR_BIT|BGFX_CLEAR_DEPTH_BIT
+		        , 0x303030ff
+		        , 1.0f
+		        , 0
+		        );
+            /*
+
+	        // Setup root path for binary shaders. Shader binaries are different 
+	        // for each renderer.
+	        switch (bgfx::getRendererType() )
+	        {
+	        default:
+	        case bgfx::RendererType::Direct3D9:
+		        s_shaderPath = "shaders/dx9/";
+		        break;
+
+	        case bgfx::RendererType::Direct3D11:
+		        s_shaderPath = "shaders/dx11/";
+		        break;
+
+	        case bgfx::RendererType::OpenGL:
+		        s_shaderPath = "shaders/glsl/";
+		        break;
+
+	        case bgfx::RendererType::OpenGLES2:
+	        case bgfx::RendererType::OpenGLES3:
+		        s_shaderPath = "shaders/gles/";
+		        break;
+	        }*/
+
+			return true;
 		}
 
-		void bgfx::StartClip()
+		bool bgfxRenderer::ShutdownContext( Gwen::WindowProvider* pWindow )
 		{
-            /*
-			Flush();
-
-			m_pDevice->SetRenderState( D3DRS_SCISSORTESTENABLE, TRUE );
-
-			const Gwen::Rect& rect = ClipRegion();
-
-			RECT r;
-
-			r.left = ceil( ((float)rect.x) * Scale() );
-			r.right = ceil(((float)(rect.x + rect.w)) * Scale());
-			r.top = ceil( (float)rect.y * Scale() );
-			r.bottom = ceil( ((float)(rect.y + rect.h)) * Scale() );
-
-			m_pDevice->SetScissorRect( &r );
-            */
+			// Shutdown bgfx.
+	        bgfx::shutdown();
+			return true;
 		}
 
-		void bgfx::EndClip()
+		bool bgfxRenderer::PresentContext( Gwen::WindowProvider* pWindow )
 		{
-            /*
-			Flush();
-			m_pDevice->SetRenderState( D3DRS_SCISSORTESTENABLE, FALSE );
-            */
+			//m_pDevice->Present( NULL, NULL, NULL, NULL );
+			return true;
 		}
 
-		void bgfx::DrawTexturedRect( Gwen::Texture* pTexture, Gwen::Rect rect, float u1, float v1, float u2, float v2 )
+		bool bgfxRenderer::ResizedContext( Gwen::WindowProvider* pWindow, int w, int h )
 		{
-            /*
-			IDirect3DTexture9* pImage = (IDirect3DTexture9*) pTexture->data;
+            
+            // Force setting the current texture again
+            m_currentTexture.idx = bgfx::invalidHandle;
 
-			// Missing image, not loaded properly?
-			if ( !pImage )
+            // Free any unmanaged resources (fonts) ??
+			//Release();
+           
+	        bgfx::reset((uint32_t ) w, (uint32_t ) h, BGFX_RESET_NONE);
+            bgfx::setViewRect(0, 0, 0, w, h);
+			return true;
+		}
+
+		bool bgfxRenderer::BeginContext( Gwen::WindowProvider* pWindow )
+		{	
+            // Set view 0 default viewport.
+		    //bgfx::setViewRect(0, 0, 0, width, height);
+
+		    // This dummy draw call is here to make sure that view 0 is cleared
+		    // if no other draw calls are submitted to view 0.
+		    bgfx::submit(0);
+
+			return true;
+		}
+
+		bool bgfxRenderer::EndContext( Gwen::WindowProvider* pWindow )
+		{
+			// Advance to next frame. Rendering thread will be kicked to 
+		    // process submitted rendering primitives.
+		    bgfx::frame();
+			return true;
+		}
+
+//**************************************************************************************************
+//**************************************************************************************************
+//**************************************************************************************************
+
+        void bgfxRenderer::Flush()
+		{
+			if ( m_verticesCount > 0 )
 			{
-				return DrawMissingImage( rect );
+                if (bgfx::checkAvailTransientVertexBuffer(m_verticesCount, m_posUVColorDecl))
+	            {
+                    bgfx::TransientVertexBuffer tvb;
+		            bgfx::allocTransientVertexBuffer(&tvb, m_verticesCount, m_posUVColorDecl);
+
+                    if(m_currentTexture.idx != bgfx::invalidHandle){
+                        bgfx::setProgram(m_texturedProgram);
+                    }else{
+                        bgfx::setProgram(m_flatProgram);
+                    }
+				    // Set vertex and index buffer.
+                    //TODO investigate if I can use vertex count and recycling buffer
+				    bgfx::setVertexBuffer(&tvb);
+				    //bgfx::setIndexBuffer(ibh);
+                    bgfx::submit((uint8_t) m_viewID);
+	            }else
+                {
+                    //assert(false
+                    int break_point = 0;
+                }
+
+				m_verticesCount = 0;
 			}
-
-			Translate( rect );
-
-			if ( m_pCurrentTexture != pImage )
+		}
+        
+		void bgfxRenderer::AddVert( int x, int y )
+		{    
+			if ( m_verticesCount >= MAX_VERTICES-1 )
 			{
 				Flush();
-				m_pDevice->SetTexture( 0, pImage );
-				m_pCurrentTexture = pImage;
-			}		
-
-			AddVert( rect.x, rect.y,			u1, v1 );
-			AddVert( rect.x+rect.w, rect.y,		u2, v1 );
-			AddVert( rect.x, rect.y + rect.h,	u1, v2 );
-
-			AddVert( rect.x+rect.w, rect.y,		u2, v1 );
-			AddVert( rect.x+rect.w, rect.y+rect.h, u2, v2 );
-			AddVert( rect.x, rect.y + rect.h, u1, v2 );
-            */
-			
-		}
-
-		void bgfx::LoadTexture( Gwen::Texture* pTexture )
-		{
-            /*
-			IDirect3DTexture9* ptr = NULL;
-			D3DXIMAGE_INFO ImageInfo;
-			HRESULT hr = D3DXCreateTextureFromFileExW( m_pDevice, pTexture->name.GetUnicode().c_str(), 0, 0, D3DX_DEFAULT, 0, D3DFMT_UNKNOWN, D3DPOOL_MANAGED, D3DX_DEFAULT, D3DX_DEFAULT, 0, &ImageInfo, NULL, &ptr );
-			if ( hr != S_OK )
-			{
-				return;
 			}
 
-			pTexture->data = ptr;
-			pTexture->width = ImageInfo.Width;
-			pTexture->height = ImageInfo.Height;
-            */
+			m_vertices[ m_verticesCount ].x = (float)x;
+			m_vertices[ m_verticesCount ].y = (float)y;
+			m_vertices[ m_verticesCount ].color = m_color;
+
+			m_verticesCount++;    
 		}
 
-		void bgfx::FreeTexture( Gwen::Texture* pTexture )
+		void bgfxRenderer::AddVert( int x, int y, float u, float v )
 		{
-            /*
-			IDirect3DTexture9* pImage = (IDirect3DTexture9*) pTexture->data;
-			if ( !pImage ) return;
+			if ( m_verticesCount >= MAX_VERTICES-1 )
+			{
+				Flush();
+			}
 
-			pImage->Release();
-			pTexture->data = NULL;
+			m_vertices[ m_verticesCount ].x = (float)x;
+			m_vertices[ m_verticesCount ].y = (float)y;
+            //m_vertices[ m_verticesCount ].x = -0.5f + (float)x;
+			//m_vertices[ m_verticesCount ].y = -0.5f + (float)y;
+			m_vertices[ m_verticesCount ].u = u;
+			m_vertices[ m_verticesCount ].v = v;
 
-			return;
-            */
-		}
+			m_vertices[ m_verticesCount ].color = m_color;
 
-		Gwen::Color bgfx::PixelColour( Gwen::Texture* pTexture, unsigned int x, unsigned int y, const Gwen::Color& col_default )
-		{
-            /*
-			IDirect3DTexture9* pImage = (IDirect3DTexture9*) pTexture->data;
-			if ( !pImage ) return col_default;
+			m_verticesCount++;
+		}   
 
-			IDirect3DSurface9* pSurface = NULL;
+        const bgfx::Memory* bgfxRenderer::loadShader(const char* _name)
+        {
+             char filePath[512];
+             strcpy(filePath, m_shaderPath);
+             strcat(filePath, _name);
+	        return load(filePath);
+        }
 
-			if ( pImage->GetSurfaceLevel( 0, &pSurface ) != S_OK ) return col_default;
-			if ( !pSurface ) return col_default;
-
-			D3DLOCKED_RECT lockedRect;
-			pSurface->LockRect( &lockedRect, NULL, D3DLOCK_READONLY );
-			DWORD* pixels = (DWORD*)lockedRect.pBits;
-			D3DXCOLOR color = pixels[lockedRect.Pitch / sizeof(DWORD) * y + x];
-			pSurface->UnlockRect();
-
-			pSurface->Release();
-
-			return Gwen::Color( color.r*255, color.g*255, color.b*255, color.a*255 );
-            */
-             return Gwen::Color();
-		}
-
-		void bgfx::Release()
-		{
+        const bgfx::Memory* bgfxRenderer::loadTexture(const char* _name)
+        {
+            char filePath[512];
+	        strcpy(filePath, "textures/");
+	        strcat(filePath, _name);
+	        return load(filePath);
+        }
+        
+		//void bgfxRenderer::Release()
+		//{
             /*
 			Font::List::iterator it = m_FontList.begin();
 
@@ -400,114 +606,7 @@ namespace Gwen
 				it = m_FontList.begin();
 			}
             */
-		}
-/*
-		void bgfx::FillPresentParameters( Gwen::WindowProvider* pWindow, D3DPRESENT_PARAMETERS& Params )
-		{
-        
-			HWND pHWND = (HWND)pWindow->GetWindow();
-
-			RECT ClientRect;
-			GetClientRect( pHWND, &ClientRect );
-
-			ZeroMemory( &Params, sizeof( Params ) );
-
-			Params.Windowed						= true;
-			Params.SwapEffect					= D3DSWAPEFFECT_DISCARD;
-			Params.BackBufferWidth				= ClientRect.right;
-			Params.BackBufferHeight				= ClientRect.bottom;
-			Params.FullScreen_RefreshRateInHz	= D3DPRESENT_RATE_DEFAULT;
-			Params.BackBufferFormat				= D3DFMT_X8R8G8B8;
-			Params.PresentationInterval			= D3DPRESENT_INTERVAL_IMMEDIATE;
-            
-		}
-*/
-		bool bgfx::InitializeContext( Gwen::WindowProvider* pWindow )
-		{
-            /*
-			HWND pHWND = (HWND)pWindow->GetWindow();
-
-			m_pD3D = Direct3DCreate9( D3D_SDK_VERSION );
-			if ( !m_pD3D ) return false;
-
-			
-
-			D3DCAPS9 D3DCaps;
-			m_pD3D->GetDeviceCaps( D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, &D3DCaps );
-
-			DWORD BehaviourFlags = D3DCREATE_SOFTWARE_VERTEXPROCESSING;
-			if( D3DCaps.VertexProcessingCaps != 0 ) BehaviourFlags = D3DCREATE_HARDWARE_VERTEXPROCESSING;
-
-			D3DPRESENT_PARAMETERS Params;
-			FillPresentParameters( pWindow, Params );
-
-			HRESULT hr = m_pD3D->CreateDevice( D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, pHWND, D3DCREATE_HARDWARE_VERTEXPROCESSING, &Params, &m_pDevice );
-			if ( FAILED(hr) )
-			{
-				return false;
-			}
-
-            */
-
-			return true;
-		}
-
-		bool bgfx::ShutdownContext( Gwen::WindowProvider* pWindow )
-		{
-			/*
-            if ( m_pDevice )
-			{
-				m_pDevice->Release();
-				m_pDevice = NULL;
-			}
-
-			if ( m_pD3D )
-			{
-				m_pD3D->Release();
-				m_pD3D = NULL;
-			}
-            */
-			return true;
-		}
-
-		bool bgfx::PresentContext( Gwen::WindowProvider* pWindow )
-		{
-			//m_pDevice->Present( NULL, NULL, NULL, NULL );
-			return true;
-		}
-
-		bool bgfx::ResizedContext( Gwen::WindowProvider* pWindow, int w, int h )
-		{
-            /*
-			// Force setting the current texture again
-			m_pCurrentTexture = NULL;
-
-			// Free any unmanaged resources (fonts)
-			Release();
-
-			// Get the new window size from the HWND
-			D3DPRESENT_PARAMETERS Params;
-			FillPresentParameters( pWindow, Params );
-
-			// And reset the device!
-			m_pDevice->Reset( &Params );
-            */
-			return true;
-		}
-
-		bool bgfx::BeginContext( Gwen::WindowProvider* pWindow )
-		{
-			//m_pDevice->BeginScene();
-			//m_pDevice->Clear( 0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, D3DCOLOR_XRGB( 128, 128, 128 ), 1, 0 );
-
-			return true;
-		}
-
-		bool bgfx::EndContext( Gwen::WindowProvider* pWindow )
-		{
-			//m_pDevice->EndScene();
-			return true;
-		}
+		//}
 
 	}
 }
