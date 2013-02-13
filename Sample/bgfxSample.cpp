@@ -1,6 +1,4 @@
-
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
+#include <bgfx.h>
 
 #include "Gwen/Gwen.h"
 #include "Gwen/Skins/Simple.h"
@@ -8,108 +6,58 @@
 #include "Gwen/UnitTest/UnitTest.h"
 #include "Gwen/Input/Windows.h"
 
-#ifdef USE_DEBUG_FONT
-	#include "Gwen/Renderers/OpenGL_DebugFont.h"
-#else 
-	#include "Gwen/Renderers/OpenGL.h"
-#endif
-#include "gl/glew.h"
+#include "bgfxRenderer.h"
 
-HWND CreateGameWindow( void )
+#include "Gwen/Renderers/OpenGL_DebugFont.h"
+
+#include <common/entry.h>
+#include <common/dbg.h>
+#include <common/math.h>
+#include <common/processevents.h>
+
+
+int _main_(int _argc, char** _argv)
 {
-	WNDCLASSW	wc;
-	ZeroMemory( &wc, sizeof( wc ) );
+    uint32_t width = 1280;
+	uint32_t height = 720;
+	uint32_t debug = BGFX_DEBUG_TEXT;
 
-	wc.style			= CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
-	wc.lpfnWndProc		= DefWindowProc;
-	wc.hInstance		= GetModuleHandle(NULL);
-	wc.lpszClassName	= L"GWENWindow";
-	wc.hCursor			= LoadCursor( NULL, IDC_ARROW );
+	bgfx::init();
+	bgfx::reset(width, height);
 
-	RegisterClassW( &wc );
+	// Enable debug text.
+	bgfx::setDebug(debug);
 
-#ifdef USE_DEBUG_FONT
-	HWND hWindow = CreateWindowExW( (WS_EX_APPWINDOW | WS_EX_WINDOWEDGE) , wc.lpszClassName, L"GWEN - OpenGL Sample (Using embedded debug font renderer)", (WS_OVERLAPPEDWINDOW | WS_CLIPSIBLINGS | WS_CLIPCHILDREN) & ~(WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_THICKFRAME), -1, -1, 1004, 650, NULL, NULL, GetModuleHandle(NULL), NULL );
-#else
-	HWND hWindow = CreateWindowExW( (WS_EX_APPWINDOW | WS_EX_WINDOWEDGE) , wc.lpszClassName, L"GWEN - OpenGL Sample (No cross platform way to render fonts in OpenGL)", (WS_OVERLAPPEDWINDOW | WS_CLIPSIBLINGS | WS_CLIPCHILDREN) & ~(WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_THICKFRAME), -1, -1, 1004, 650, NULL, NULL, GetModuleHandle(NULL), NULL );
-#endif
 
-	ShowWindow( hWindow, SW_SHOW );
-	SetForegroundWindow( hWindow );
-	SetFocus( hWindow );
+    const char* shaderPath;
 
-	return hWindow;
-}
-
-HWND						g_pHWND = NULL;
-
-HGLRC CreateOpenGLDeviceContext()
-{
-	PIXELFORMATDESCRIPTOR pfd = { 0 };
-	pfd.nSize = sizeof( PIXELFORMATDESCRIPTOR );    // just its size
-    pfd.nVersion = 1;   // always 1
-
-    pfd.dwFlags = PFD_SUPPORT_OPENGL |  // OpenGL support - not DirectDraw
-                  PFD_DOUBLEBUFFER   |  // double buffering support
-                  PFD_DRAW_TO_WINDOW;   // draw to the app window, not to a bitmap image
-
-    pfd.iPixelType = PFD_TYPE_RGBA ;    // red, green, blue, alpha for each pixel
-    pfd.cColorBits = 24;                // 24 bit == 8 bits for red, 8 for green, 8 for blue.
-                                        // This count of color bits EXCLUDES alpha.
-
-    pfd.cDepthBits = 32;                // 32 bits to measure pixel depth.  
-
-	int pixelFormat = ChoosePixelFormat( GetDC( g_pHWND ), &pfd );
-    
-	if ( pixelFormat == 0 )
-    {
-        FatalAppExit( NULL, TEXT("ChoosePixelFormat() failed!") );
-    }    
-
-	SetPixelFormat( GetDC( g_pHWND ), pixelFormat, &pfd );
-
-	HGLRC OpenGLContext = wglCreateContext( GetDC( g_pHWND ) );
-	    
-	wglMakeCurrent( GetDC( g_pHWND ), OpenGLContext );
-
-	RECT r;
-	if ( GetClientRect( g_pHWND, &r ) )
+    // Setup root path for binary shaders. Shader binaries are different 
+	// for each renderer.
+	switch (bgfx::getRendererType() )
 	{
-		glMatrixMode( GL_PROJECTION );
-		glLoadIdentity();
-		glOrtho( r.left, r.right, r.bottom, r.top, -1.0, 1.0);
-		glMatrixMode( GL_MODELVIEW );
-		glViewport(0, 0, r.right - r.left, r.bottom - r.top);
+	default:
+	case bgfx::RendererType::Direct3D9:
+		shaderPath = "shaders/dx9/";
+		break;
+
+	case bgfx::RendererType::Direct3D11:
+		shaderPath = "shaders/dx11/";
+		break;
+
+	case bgfx::RendererType::OpenGL:
+		shaderPath = "shaders/glsl/";
+		break;
+
+	case bgfx::RendererType::OpenGLES2:
+	case bgfx::RendererType::OpenGLES3:
+		shaderPath = "shaders/gles/";
+		break;
 	}
 
-	return OpenGLContext;
-}
 
-
-int main()
-{
-
-	//
-	// Create a new window
-	//
-	g_pHWND = CreateGameWindow();
-
-	//
-	// Create OpenGL Device
-	//
-	HGLRC OpenGLContext = CreateOpenGLDeviceContext();	
-
-
-	//
-	// Create a GWEN OpenGL Renderer
-	//
-	#ifdef USE_DEBUG_FONT
-		Gwen::Renderer::OpenGL * pRenderer = new Gwen::Renderer::OpenGL_DebugFont();
-	#else
-		Gwen::Renderer::OpenGL * pRenderer = new Gwen::Renderer::OpenGL();
-	#endif
-
-		pRenderer->Init();
+    	
+    Gwen::Renderer::bgfxRenderer * pRenderer = new Gwen::Renderer::bgfxRenderer(0,shaderPath, "textures/");
+	pRenderer->Init();
 
 	//
 	// Create a GWEN skin
@@ -138,6 +86,33 @@ int main()
 	Gwen::Input::Windows GwenInput;
 	GwenInput.Initialize( pCanvas );
 
+
+
+    while (!processEvents(width, height, debug) )
+	{
+		// Set view 0 default viewport.
+		bgfx::setViewRect(0, 0, 0, width, height);
+
+		// This dummy draw call is here to make sure that view 0 is cleared
+		// if no other draw calls are submitted to view 0.
+		bgfx::submit(0);
+
+		// Use debug font to print information about this example.
+		bgfx::dbgTextClear();
+		bgfx::dbgTextPrintf(0, 1, 0x4f, "bgfx/examples/00-helloworld");
+		bgfx::dbgTextPrintf(0, 2, 0x6f, "Description: Initialization and debug text.");
+
+		// Advance to next frame. Rendering thread will be kicked to 
+		// process submitted rendering primitives.
+		bgfx::frame();
+	}
+
+	// Shutdown bgfx.
+    bgfx::shutdown();
+
+	return 0;
+
+    /*
 	//
 	// Begin the main game loop
 	//
@@ -182,5 +157,6 @@ int main()
 	delete pCanvas;
 	delete pSkin;
 	delete pRenderer;
+    */
 
 }
