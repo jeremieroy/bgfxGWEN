@@ -32,32 +32,21 @@ local BGFX_BUILD_DIR = BUILD_DIR
 local BGFX_THIRD_PARTY_DIR = (BGFX_DIR .. "3rdparty/")
 toolchain(BGFX_BUILD_DIR, BGFX_THIRD_PARTY_DIR)
 
-function compileShader(_name, _type, _platform)
-	local inputShaderPath = path.getabsolute(INPUT_SHADERS_DIR) .. "/" .. _name .. ".sc"
-	local outputShaderPath = path.getabsolute(ENV_DIR .. "shaders/" .. _platform .. "/" .. _name .. ".bin")
-	local varyingPath = path.getabsolute(BGFX_DIR) .. "/src/varying.def.sc"
-	local cmd = path.getabsolute(BGFX_DIR) .. "/tools/bin/shaderc.exe -f " .. inputShaderPath .. " -o " .. outputShaderPath .. " --type " .. _type .. " --platform " .. _platform .. " --varyingdef " .. varyingPath .." -p ps_3_0"
-	os.execute("echo " .. cmd)
-	os.execute(cmd)
+
+dofile "bgfx_compile_shader.lua"
+
+function compileShaders()
+	bgfx_compile_shader(INPUT_SHADERS_DIR, ENV_DIR, BUILD_DIR, "dx9" )
+	bgfx_compile_shader(INPUT_SHADERS_DIR, ENV_DIR, BUILD_DIR, "dx11" )
+	bgfx_compile_shader(INPUT_SHADERS_DIR, ENV_DIR, BUILD_DIR, "nacl" )
+	bgfx_compile_shader(INPUT_SHADERS_DIR, ENV_DIR, BUILD_DIR, "android" )
+	bgfx_compile_shader(INPUT_SHADERS_DIR, ENV_DIR, BUILD_DIR, "linux" )
 end
 
-function makeShaders()
-	os.mkdir(ENV_DIR)
-	os.mkdir(ENV_DIR .. "shaders")
-	os.mkdir(ENV_DIR .. "shaders/windows")
-	-- ensure bgfx shaders are present
-	os.copyfile(BGFX_DIR .."src/common.sh", INPUT_SHADERS_DIR .. "common.sh")
-	os.copyfile(BGFX_DIR .."src/bgfx_shader.sh", INPUT_SHADERS_DIR .. "bgfx_shader.sh")
-	compileShader("vs_gwen" , "v", "windows")
-	--compileShader("fs_gwen_flat" , "fragment", "windows")
-	--compileShader("fs_gwen_textured" , "fragment", "windows")
-end
+compileShaders()
 
 function copyLib()
 end
-
-makeShaders()
-
 dofile (BGFX_DIR .. "premake/bgfx.lua")
 
 
