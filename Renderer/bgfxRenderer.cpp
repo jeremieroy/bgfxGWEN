@@ -72,7 +72,7 @@ namespace Gwen
             mem = loadShader("fs_gwen_textured");
 	        bgfx::FragmentShaderHandle fs_gwen_textured = bgfx::createFragmentShader(mem);
 
-			bgfx::UniformHandle u_color0 = bgfx::createUniform("u_color0", bgfx::UniformType::Uniform4fv);
+			//bgfx::UniformHandle u_color0 = bgfx::createUniform("u_color0", bgfx::UniformType::Uniform4fv);
             
             // Create program from shaders.
         	m_flatProgram = bgfx::createProgram(vs_gwen_flat, fs_gwen_flat);			
@@ -112,7 +112,7 @@ namespace Gwen
 
 		void bgfxRenderer::Begin()
 		{
-            //bgfx::setViewRect(0, 0, 0, width, height);         
+            bgfx::setViewRect(0, 0, 0, m_width, m_height);         
 			bgfx::setState( 
 				BGFX_STATE_RGB_WRITE
 				|BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_SRC_ALPHA, BGFX_STATE_BLEND_INV_SRC_ALPHA)
@@ -120,6 +120,10 @@ namespace Gwen
 				|BGFX_STATE_DEPTH_WRITE
 				|BGFX_STATE_DEPTH_TEST_LESS
 				);
+
+			//TODO clarify depth sorting in regard to gwen
+			//seems to be decreasing.
+			m_depth = 5000;
 
             //better kept outside ...
             //float view[16];
@@ -130,34 +134,6 @@ namespace Gwen
 		    // Set view and projection matrix for view 0.
 		    //bgfx::setViewTransform(0, view, proj);
 
-            /*
-            glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
-			glAlphaFunc( GL_GREATER, 1.0f );	
-			glEnable ( GL_BLEND );
-            */
-            /*
-			m_pDevice->SetRenderState( D3DRS_ALPHABLENDENABLE, TRUE ); 
-			m_pDevice->SetRenderState( D3DRS_SRCBLEND, D3DBLEND_SRCALPHA );
-			m_pDevice->SetRenderState( D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA );
-
-			m_pDevice->SetSamplerState( 0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR );
-			m_pDevice->SetSamplerState( 0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR );
-			m_pDevice->SetSamplerState( 0, D3DSAMP_MIPFILTER, D3DTEXF_NONE );
-
-			m_pDevice->SetSamplerState( 0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
-			m_pDevice->SetSamplerState( 0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
-
-			m_pDevice->SetTextureStageState( 0, D3DTSS_COLOROP,		D3DTOP_MODULATE );
-			m_pDevice->SetTextureStageState( 0, D3DTSS_COLORARG1,	D3DTA_TEXTURE );
-			m_pDevice->SetTextureStageState( 0, D3DTSS_COLORARG2,	D3DTA_CURRENT );
-
-			m_pDevice->SetTextureStageState( 0, D3DTSS_ALPHAOP,		D3DTOP_MODULATE );
-			m_pDevice->SetTextureStageState( 0, D3DTSS_ALPHAARG1,	D3DTA_TEXTURE );
-			m_pDevice->SetTextureStageState( 0, D3DTSS_ALPHAARG2,	D3DTA_CURRENT );
-
-			m_pDevice->SetTextureStageState( 1, D3DTSS_ALPHAOP, D3DTOP_DISABLE );
-			m_pDevice->SetTextureStageState( 1, D3DTSS_COLOROP, D3DTOP_DISABLE );
-            */
 		}
 
 		void bgfxRenderer::End()
@@ -168,9 +144,7 @@ namespace Gwen
 
         void bgfxRenderer::SetDrawColor(Gwen::Color color)
 		{
-            //memcpy(&m_color, &color, 4);
-			//m_color = 0xFF0000FF;
-			m_color = rand() | 0xFF0000FF;
+           // memcpy(&m_color, &color, 4);			
 		}
 
 		void bgfxRenderer::DrawFilledRect( Gwen::Rect rect )
@@ -180,6 +154,9 @@ namespace Gwen
 				Flush();
 				m_currentTexture.idx = bgfx::invalidHandle;
 			}
+
+			m_color = rand() | 0x44000044;
+
 
 			Translate( rect );
 
@@ -196,12 +173,14 @@ namespace Gwen
 		{
             //state change
 			Flush();
+			/*
             const Gwen::Rect& rect = ClipRegion();
             uint16_t x = rect.x * Scale();
             uint16_t y = rect.y * Scale();
             uint16_t w = rect.w * Scale();
             uint16_t h = rect.h * Scale();
             bgfx::setViewRect(m_viewID, x, y, w, h);
+			*/
 		}
 
 		void bgfxRenderer::EndClip()
@@ -209,7 +188,7 @@ namespace Gwen
 
             //state change
 			Flush();
-            bgfx::setViewRect(m_viewID, 0, 0, m_width, m_height);
+            //bgfx::setViewRect(m_viewID, 0, 0, m_width, m_height);
 		}
 
         void bgfxRenderer::LoadTexture( Gwen::Texture* pTexture )
@@ -268,6 +247,8 @@ namespace Gwen
 				Flush();
                 m_currentTexture.idx = handle.idx;
 			}
+
+			m_color = rand();// | 0x44000044;
 
 			AddVert( rect.x, rect.y,			u1, v1 );
 			AddVert( rect.x+rect.w, rect.y,		u2, v1 );
@@ -554,7 +535,7 @@ namespace Gwen
 				    // Set vertex and index buffer.                    
 				    bgfx::setVertexBuffer(&tvb, m_verticesCount);
 				    //bgfx::setIndexBuffer(ibh);
-                    bgfx::submit((uint8_t) m_viewID);
+                    bgfx::submit((uint8_t) m_viewID, m_depth--);
 	            }else
                 {
                     //assert(false

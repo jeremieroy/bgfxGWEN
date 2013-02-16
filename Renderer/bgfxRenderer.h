@@ -91,7 +91,7 @@ namespace Gwen
                 bgfx::ProgramHandle m_texturedProgram;
 
                 bgfx::TextureHandle m_currentTexture;
-							
+				int32_t m_depth;			
                 uint32_t m_color;
                 uint32_t m_width;
 	            uint32_t m_height;
