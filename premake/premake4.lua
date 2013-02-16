@@ -34,7 +34,6 @@ toolchain(BGFX_BUILD_DIR, BGFX_THIRD_PARTY_DIR)
 
 
 dofile "bgfx_compile_shader.lua"
-
 function compileShaders()
 	bgfx_compile_shader(INPUT_SHADERS_DIR, ENV_DIR, BUILD_DIR, "dx9" )
 	bgfx_compile_shader(INPUT_SHADERS_DIR, ENV_DIR, BUILD_DIR, "dx11" )
@@ -43,7 +42,21 @@ function compileShaders()
 	bgfx_compile_shader(INPUT_SHADERS_DIR, ENV_DIR, BUILD_DIR, "linux" )
 end
 
-compileShaders()
+newaction {
+    trigger = 'shaders',
+    description = 'Bake shaders',
+    shortname = "Bake shaders",
+    --valid_kinds = premake.action.get("*").valid_kinds,
+    --valid_languages = premake.action.get("*").valid_languages,
+    --valid_tools = premake.action.get("*").valid_tools,
+    execute = function()
+		compileShaders()
+    end
+}
+
+
+
+
 
 function copyLib()
 end
