@@ -95,7 +95,7 @@ function exampleProject(_name, _uuid)
 
 	configuration {}
 
-	debugdir (BGFX_DIR .. "examples/runtime/")
+	debugdir (ENV_DIR)
 
 	includedirs {
 		BX_DIR .. "include",
