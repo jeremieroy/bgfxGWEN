@@ -85,12 +85,13 @@ namespace Gwen
                 int m_viewID;                
                 //bgfx::DynamicVertexBufferHandle m_vertexBufferHandle;
                 //bgfx::DynamicIndexBufferHandle m_indexBufferHandle;
+				bgfx::VertexDecl m_posDecl;
                 bgfx::VertexDecl m_posUVColorDecl;
                 bgfx::ProgramHandle m_flatProgram;
                 bgfx::ProgramHandle m_texturedProgram;
 
                 bgfx::TextureHandle m_currentTexture;
-
+							
                 uint32_t m_color;
                 uint32_t m_width;
 	            uint32_t m_height;
@@ -104,7 +105,7 @@ namespace Gwen
                 const char* m_shaderPath;
                 const char* m_texturePath;
 
-                
+                //TODO
                 struct VertexFormat
 				{
 					float x, y; //could be packed
@@ -112,8 +113,15 @@ namespace Gwen
 					uint32_t color; //0xAABBGGRR
 				};
 
+				struct PosVF
+				{
+					float x, y; //could be packed	
+					uint32_t color; //0xAABBGGRR
+				};
+
+
                 static const  int		MAX_VERTICES = 1024;                
-				VertexFormat		    m_vertices[MAX_VERTICES];
+				PosVF		    m_vertices[MAX_VERTICES];
 				int						m_verticesCount;
                 //uint16_t                m_indices[ ];
 

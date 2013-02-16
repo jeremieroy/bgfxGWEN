@@ -59,8 +59,11 @@ namespace Gwen
 
             // Load vertex shader.
             const bgfx::Memory* mem;
-	        mem = loadShader("vs_gwen");
-	        bgfx::VertexShaderHandle vs_gwen = bgfx::createVertexShader(mem);
+	        mem = loadShader("vs_gwen_flat");
+	        bgfx::VertexShaderHandle vs_gwen_flat = bgfx::createVertexShader(mem);
+
+			mem = loadShader("vs_gwen_textured");
+	        bgfx::VertexShaderHandle vs_gwen_textured = bgfx::createVertexShader(mem);
 
 	        // Load fragment shader.
 	        mem = loadShader("fs_gwen_flat");
@@ -68,16 +71,19 @@ namespace Gwen
 
             mem = loadShader("fs_gwen_textured");
 	        bgfx::FragmentShaderHandle fs_gwen_textured = bgfx::createFragmentShader(mem);
+
+			bgfx::UniformHandle u_color0 = bgfx::createUniform("u_color0", bgfx::UniformType::Uniform4fv);
             
             // Create program from shaders.
-        	m_flatProgram = bgfx::createProgram(vs_gwen, fs_gwen_flat);
-            m_texturedProgram = bgfx::createProgram(vs_gwen, fs_gwen_textured);
+        	m_flatProgram = bgfx::createProgram(vs_gwen_flat, fs_gwen_flat);			
+            m_texturedProgram = bgfx::createProgram(vs_gwen_textured, fs_gwen_textured);
             
             // We can destroy vertex and fragment shader here since
 	        // their reference is kept inside bgfx after calling createProgram.
 	        // Vertex and fragment shader will be destroyed once program is
 	        // destroyed.
-            bgfx::destroyVertexShader(vs_gwen);
+            bgfx::destroyVertexShader(vs_gwen_flat);
+			bgfx::destroyVertexShader(vs_gwen_textured);
 	        bgfx::destroyFragmentShader(fs_gwen_flat);
             bgfx::destroyFragmentShader(fs_gwen_textured);
 
@@ -87,6 +93,11 @@ namespace Gwen
             m_posUVColorDecl.add(bgfx::Attrib::TexCoord0, 2, bgfx::AttribType::Float);
 	        m_posUVColorDecl.add(bgfx::Attrib::Color0, 4, bgfx::AttribType::Uint8, true);
 	        m_posUVColorDecl.end();
+
+			m_posDecl.begin();
+	        m_posDecl.add(bgfx::Attrib::Position, 2, bgfx::AttribType::Float);
+			m_posDecl.add(bgfx::Attrib::Color0, 4, bgfx::AttribType::Uint8, true);
+	        m_posDecl.end();
 		}
 
 		bgfxRenderer::~bgfxRenderer()
@@ -101,11 +112,15 @@ namespace Gwen
 
 		void bgfxRenderer::Begin()
 		{
-            //bgfx::setViewRect(0, 0, 0, width, height);
-            bgfx::setState(BGFX_STATE_BLEND_INV_SRC_ALPHA
-					|BGFX_STATE_ALPHA_TEST_GREATER
-					//|BGFX_STATE_DEPTH_TEST_LESS
-					);
+            //bgfx::setViewRect(0, 0, 0, width, height);         
+			bgfx::setState( 
+				BGFX_STATE_RGB_WRITE
+				|BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_SRC_ALPHA, BGFX_STATE_BLEND_INV_SRC_ALPHA)
+				//|BGFX_STATE_ALPHA_TEST
+				|BGFX_STATE_DEPTH_WRITE
+				|BGFX_STATE_DEPTH_TEST_LESS
+				);
+
             //better kept outside ...
             //float view[16];
 		    //float proj[16];
@@ -153,7 +168,9 @@ namespace Gwen
 
         void bgfxRenderer::SetDrawColor(Gwen::Color color)
 		{
-            memcpy(&m_color, &color, 4);
+            //memcpy(&m_color, &color, 4);
+			//m_color = 0xFF0000FF;
+			m_color = rand() | 0xFF0000FF;
 		}
 
 		void bgfxRenderer::DrawFilledRect( Gwen::Rect rect )
@@ -178,25 +195,26 @@ namespace Gwen
         void bgfxRenderer::StartClip()
 		{
             //state change
-			//Flush();
-            //const Gwen::Rect& rect = ClipRegion();
-            //uint16_t x = rect.x * Scale();
-            //uint16_t y = rect.y * Scale();
-            //uint16_t w = rect.w * Scale();
-            //uint16_t h = rect.h * Scale();
-            //bgfx::setViewRect(m_viewID, x, y, w, h);
+			Flush();
+            const Gwen::Rect& rect = ClipRegion();
+            uint16_t x = rect.x * Scale();
+            uint16_t y = rect.y * Scale();
+            uint16_t w = rect.w * Scale();
+            uint16_t h = rect.h * Scale();
+            bgfx::setViewRect(m_viewID, x, y, w, h);
 		}
 
 		void bgfxRenderer::EndClip()
 		{
 
             //state change
-			//Flush();
-            //bgfx::setViewRect(m_viewID, 0, 0, m_width, m_height);
+			Flush();
+            bgfx::setViewRect(m_viewID, 0, 0, m_width, m_height);
 		}
 
         void bgfxRenderer::LoadTexture( Gwen::Texture* pTexture )
 		{
+			return;
             //const wchar_t *wFileName = pTexture->name.GetUnicode().c_str();
             const char* fileName = pTexture->name.c_str();
 
@@ -521,19 +539,20 @@ namespace Gwen
 		{
 			if ( m_verticesCount > 0 )
 			{
-                if (bgfx::checkAvailTransientVertexBuffer(m_verticesCount, m_posUVColorDecl))
+                if (bgfx::checkAvailTransientVertexBuffer(m_verticesCount, m_posDecl))
 	            {
                     bgfx::TransientVertexBuffer tvb;
-		            bgfx::allocTransientVertexBuffer(&tvb, m_verticesCount, m_posUVColorDecl);
+		            bgfx::allocTransientVertexBuffer(&tvb, m_verticesCount, m_posDecl);
 
+					memcpy(tvb.data, m_vertices, m_verticesCount * sizeof(PosVF));
                     if(m_currentTexture.idx != bgfx::invalidHandle){
-                        bgfx::setProgram(m_texturedProgram);
+                        //bgfx::setProgram(m_texturedProgram);
+						bgfx::setProgram(m_flatProgram);
                     }else{
                         bgfx::setProgram(m_flatProgram);
                     }
-				    // Set vertex and index buffer.
-                    //TODO investigate if I can use vertex count and recycling buffer
-				    bgfx::setVertexBuffer(&tvb);
+				    // Set vertex and index buffer.                    
+				    bgfx::setVertexBuffer(&tvb, m_verticesCount);
 				    //bgfx::setIndexBuffer(ibh);
                     bgfx::submit((uint8_t) m_viewID);
 	            }else
@@ -571,8 +590,8 @@ namespace Gwen
 			m_vertices[ m_verticesCount ].y = (float)y;
             //m_vertices[ m_verticesCount ].x = -0.5f + (float)x;
 			//m_vertices[ m_verticesCount ].y = -0.5f + (float)y;
-			m_vertices[ m_verticesCount ].u = u;
-			m_vertices[ m_verticesCount ].v = v;
+			//m_vertices[ m_verticesCount ].u = u;
+			//m_vertices[ m_verticesCount ].v = v;
 
 			m_vertices[ m_verticesCount ].color = m_color;
 
@@ -584,6 +603,7 @@ namespace Gwen
              char filePath[512];
              strcpy(filePath, m_shaderPath);
              strcat(filePath, _name);
+			 strcat(filePath, ".bin");
 	        return load(filePath);
         }
 

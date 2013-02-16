@@ -18,6 +18,18 @@
 namespace bgfx_font
 {
 
+/// Quad packer algorithm
+/// Given a rectangular zone, fit smaller rectangle inside as tightly as possible.
+// QuadPacker
+
+/// Font Helper
+/// Given a font, provide information about glyph and bake glyph to images
+
+/// Font Stash
+/// Raster glyph on demand to a stash and give back glyph accordingly
+/// if given a font helper, it can bake font when needed
+
+
 struct Rect16
 {
     Rect16(uint16_t _x, uint16_t _y, uint16_t _w, uint16_t _h):x(_x), y(_y), w(_w), h(_h) {}
@@ -26,20 +38,19 @@ struct Rect16
     uint16_t w,h;
 };
 
-//engine abstraction
+/// engine abstraction
 class ITextureProvider
 {
 public:
-    virtual void init() = 0;
-    virtual void shutdown() = 0;
-    
     virtual uint16_t getWidth() = 0;
     virtual uint16_t getHeight() = 0;
     virtual uint32_t getDepth() = 0;
     
-    virtual void update(Rect16 rect, const char* data, uint32_t stride) = 0;
+    virtual void update(Rect16 rect, const uint8_t* data) = 0;
     virtual void clear() = 0;
 };
+
+  
 
 struct Node
 {
@@ -59,7 +70,7 @@ public:
     GlyphStash(ITextureProvider* texture);
     ~GlyphStash();    
     Rect16 allocateRegion(uint16_t w, uint16_t h);
-    void updateRegion(Rect16 rect, const char* data, uint32_t stride);
+    void updateRegion(Rect16 rect, const uint8_t* data);
     float getUsageRatio();
     void clear();
 private:

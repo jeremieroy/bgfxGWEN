@@ -14,11 +14,9 @@ GlyphStash::GlyphStash(ITextureProvider* texture)
 {
     BGFX_FONT_ASSERT(texture != NULL, "A texture provider cannot be NULL");
 
-    texture->init();
-
     uint32_t depth = texture->getDepth();
-    uint32_t width = texture->getDepth();
-    uint32_t height = texture->getDepth();
+    uint32_t width = texture->getWidth();
+    uint32_t height = texture->getHeight();
     
     BGFX_FONT_ASSERT( (depth == 1) || (depth == 4) , "Incompatible texture depth, must be 1 or 4");
     
@@ -35,10 +33,9 @@ GlyphStash::GlyphStash(ITextureProvider* texture)
 
 GlyphStash::~GlyphStash()
 {
-    m_texture->shutdown();
 }
 
-void GlyphStash::updateRegion(Rect16 rect, const char* data, uint32_t stride)
+void GlyphStash::updateRegion(Rect16 rect, const uint8_t* data)
 {   
     assert( rect.x < (m_width-1));
     assert( (uint32_t)(rect.x + rect.w) <= (uint32_t)(m_width-1));
@@ -46,7 +43,7 @@ void GlyphStash::updateRegion(Rect16 rect, const char* data, uint32_t stride)
     assert( (uint32_t)(rect.y + rect.h) <= (uint32_t)(m_height-1));
 
 
-    m_texture->update(rect, data, stride);
+    m_texture->update(rect, data);//, stride);
     /*
     size_t i;
     size_t depth = self->depth;
@@ -84,7 +81,8 @@ int32_t GlyphStash::fit(uint32_t skylineNodeIndex, uint16_t _width, uint16_t _he
     
     Node& baseNode = m_skyline[skylineNodeIndex];
     
-    uint32_t x = baseNode.x, y, width_left = width;
+    uint32_t x = baseNode.x, y;
+	int32_t width_left = width;
 	uint32_t i = skylineNodeIndex;
 
     if ( (x + width) > (m_width-1) )
@@ -201,44 +199,5 @@ Rect16 GlyphStash::allocateRegion(uint16_t width, uint16_t height)
     return region;
 }
 
-// --------------------------------------------------- texture_atlas_upload ---
-/*
-void
-texture_atlas_upload( texture_atlas_t * self )
-{
-    assert( self );
-    assert( self->data );
 
-    if( !self->id )
-    {
-        glGenTextures( 1, &self->id );
-    }
-
-    glBindTexture( GL_TEXTURE_2D, self->id );
-    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
-    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
-    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
-    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
-    if( self->depth == 4 )
-    {
-#ifdef GL_UNSIGNED_INT_8_8_8_8_REV
-        glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, self->width, self->height,
-                      0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, self->data );
-#else
-        glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, self->width, self->height,
-                      0, GL_RGBA, GL_UNSIGNED_BYTE, self->data );
-#endif
-    }
-    else if( self->depth == 3 )
-    {
-        glTexImage2D( GL_TEXTURE_2D, 0, GL_RGB, self->width, self->height,
-                      0, GL_RGB, GL_UNSIGNED_BYTE, self->data );
-    }
-    else
-    {
-        glTexImage2D( GL_TEXTURE_2D, 0, GL_ALPHA, self->width, self->height,
-                      0, GL_ALPHA, GL_UNSIGNED_BYTE, self->data );
-    }
-}
-*/
 }
