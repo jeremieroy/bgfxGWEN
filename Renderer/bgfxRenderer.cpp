@@ -144,7 +144,7 @@ namespace Gwen
 
         void bgfxRenderer::SetDrawColor(Gwen::Color color)
 		{
-           // memcpy(&m_color, &color, 4);			
+           memcpy(&m_color, &color, 4);			
 		}
 
 		void bgfxRenderer::DrawFilledRect( Gwen::Rect rect )
@@ -155,7 +155,7 @@ namespace Gwen
 				m_currentTexture.idx = bgfx::invalidHandle;
 			}
 
-			m_color = rand() | 0x44000044;
+			//m_color = rand() | 0x44000044;
 
 
 			Translate( rect );
@@ -248,7 +248,7 @@ namespace Gwen
                 m_currentTexture.idx = handle.idx;
 			}
 
-			m_color = rand();// | 0x44000044;
+			//m_color = rand();// | 0x44000044;
 
 			AddVert( rect.x, rect.y,			u1, v1 );
 			AddVert( rect.x+rect.w, rect.y,		u2, v1 );

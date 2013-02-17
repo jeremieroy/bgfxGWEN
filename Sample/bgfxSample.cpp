@@ -211,8 +211,12 @@ int _main_(int _argc, char** _argv)
 	//
 	// Create a GWEN skin
 	//
-	Gwen::Skin::TexturedBase* pSkin = new Gwen::Skin::TexturedBase( pRenderer );
-	pSkin->Init("DefaultSkin.png");
+	//Gwen::Skin::TexturedBase* pSkin = new Gwen::Skin::TexturedBase( pRenderer );
+	//pSkin->Init("DefaultSkin.png");
+
+	Gwen::Skin::Simple* pSkin = new Gwen::Skin::Simple();
+	pSkin->SetRender(pRenderer);
+	//pSkin->Init("DefaultSkin.png");
 
 	//
 	// Create a Canvas (it's root, on which all other GWEN panels are created)
