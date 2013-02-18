@@ -249,7 +249,7 @@ int _main_(int _argc, char** _argv)
     bgfx_font::GlyphStash stash(text_provider);
 	std::vector<uint8_t> buffer;
 	float emSize = 18.0f;
-	bgfx_font::GlyphSize glyphSize = font->getGlyphSize('a',emSize);
+	bgfx_font::GlyphInfo glyphInfo = font->getGlyphInfo('a',emSize);
     bgfx_font::Rect16 rect = stash.allocateRegion(glyphSize.width, glyphSize.height);
 	buffer.resize(glyphSize.width*glyphSize.height);
     font->bakeGlyphAlpha('a', emSize, &buffer[0]);
@@ -352,7 +352,7 @@ int _main_(int _argc, char** _argv)
 		// Submit primitive for rendering to view 0.
 		bgfx::submit(0);
 
-		pCanvas->RenderCanvas();
+		//pCanvas->RenderCanvas();
 
 
         // Advance to next frame. Rendering thread will be kicked to 

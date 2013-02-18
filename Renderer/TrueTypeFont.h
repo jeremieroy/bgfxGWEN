@@ -3,76 +3,76 @@
 /// use stb_truetype
 
 #include <stdint.h> // uint32_t
-
-struct stbtt_fontinfo;
+struct stbtt_fontinfo; //forward decl.
 
 namespace bgfx_font
 {
-    struct GlyphSize
-    {
-        uint16_t width;
-        uint16_t height;
-    };
 
-	typedef int16_t FontHandle;
 
-	/*
- * Glyph metrics:
- * --------------
- *
- *                       xmin                     xmax
- *                        |                         |
- *                        |<-------- width -------->|
- *                        |                         |    
- *              |         +-------------------------+----------------- ymax
- *              |         |    ggggggggg   ggggg    |     ^        ^
- *              |         |   g:::::::::ggg::::g    |     |        | 
- *              |         |  g:::::::::::::::::g    |     |        | 
- *              |         | g::::::ggggg::::::gg    |     |        | 
- *              |         | g:::::g     g:::::g     |     |        | 
- *    offset_x -|-------->| g:::::g     g:::::g     |  offset_y    | 
- *              |         | g:::::g     g:::::g     |     |        | 
- *              |         | g::::::g    g:::::g     |     |        | 
- *              |         | g:::::::ggggg:::::g     |     |        |  
- *              |         |  g::::::::::::::::g     |     |      height
- *              |         |   gg::::::::::::::g     |     |        | 
- *  baseline ---*---------|---- gggggggg::::::g-----*--------      |
- *            / |         |             g:::::g     |              | 
- *     origin   |         | gggggg      g:::::g     |              | 
- *              |         | g:::::gg   gg:::::g     |              | 
- *              |         |  g::::::ggg:::::::g     |              | 
- *              |         |   gg:::::::::::::g      |              | 
- *              |         |     ggg::::::ggg        |              | 
- *              |         |         gggggg          |              v
- *              |         +-------------------------+----------------- ymin
- *              |                                   |
- *              |------------- advance_x ---------->|
- */
+// Glyph metrics:
+// --------------
+//
+//                       xmin                     xmax
+//                        |                         |
+//                        |<-------- width -------->|
+//                        |                         |    
+//              |         +-------------------------+----------------- ymax
+//              |         |    ggggggggg   ggggg    |     ^        ^
+//              |         |   g:::::::::ggg::::g    |     |        | 
+//              |         |  g:::::::::::::::::g    |     |        | 
+//              |         | g::::::ggggg::::::gg    |     |        | 
+//              |         | g:::::g     g:::::g     |     |        | 
+//    offset_x -|-------->| g:::::g     g:::::g     |  offset_y    | 
+//              |         | g:::::g     g:::::g     |     |        | 
+//              |         | g::::::g    g:::::g     |     |        | 
+//              |         | g:::::::ggggg:::::g     |     |        |  
+//              |         |  g::::::::::::::::g     |     |      height
+//              |         |   gg::::::::::::::g     |     |        | 
+//  baseline ---*---------|---- gggggggg::::::g-----*--------      |
+//            / |         |             g:::::g     |              | 
+//     origin   |         | gggggg      g:::::g     |              | 
+//              |         | g:::::gg   gg:::::g     |              | 
+//              |         |  g::::::ggg:::::::g     |              | 
+//              |         |   gg:::::::::::::g      |              | 
+//              |         |     ggg::::::ggg        |              | 
+//              |         |         gggggg          |              v
+//              |         +-------------------------+----------------- ymin
+//              |                                   |
+//              |------------- advance_x ---------->|
 
-/**
- * A structure that describe a glyph.
- */
+typedef int32_t CodePoint_t;
+
+/// A structure that describe a glyph.
+//TODO separate what is font specific from what's not
 struct GlyphInfo
 {
-    /// Wide character this glyph represents
-    //uint32_t charcode;
+	GlyphInfo(){}
+	GlyphInfo(uint16_t _width, uint16_t _height, float _offset_x, float _offset_y, float _advance_x, float _advance_y)
+		: width(_width), height(_height), offset_x(_offset_x), offset_y(_offset_y), advance_x(_advance_x), advance_y(_advance_y){}
+    
+	/// Index for faster retrieval
+	int32_t glyphIndex;
+
 	/// Glyph's width in pixels.
     uint16_t width;
-	
 	/// Glyph's height in pixels.
 	uint16_t height;
 	
+	//TODO Check if I can make the offsets uint16
 	/// Glyph's left offset in pixels.
-    int16_t offset_x;
+    float offset_x;
 	    
     /// Glyphs's top offset in pixels.
     /// Remember that this is the distance from the baseline to the top-most
     /// glyph scanline, upwards y coordinates being positive.
-    int16_t offset_y;
+    float offset_y;
 
-	int16_t advance_x;
-
-	int16_t advance_y;
+	float advance_x;
+	float advance_y;
+	
+	//position in the atlas if any.
+	uint16_t texture_x;
+	uint16_t texture_y;
 	
 	/*
     /// For horizontal text layouts, this is the horizontal distance (in
@@ -108,35 +108,32 @@ struct GlyphInfo
     float outline_thickness;
 	*/
 };
-
-
-// ascent is the coordinate above the baseline the font extends; descent
-	// is the coordinate below the baseline the font extends (i.e. it is typically negative)
-	// lineGap is the spacing between one row's descent and the next row's ascent...
-	// so you should advance the vertical position by "*ascent - *descent + *lineGap"
-	//   these are expressed in unscaled coordinates, so you must multiply by
-	//   the scale factor for a given size
-	//int ascent, descent, lineGap;
-	//stbtt_GetFontVMetrics(m_stbFont, &ascent, &descent, &lineGap);
-
-
-
 	
-    class TrueTypeFont
-    {
-    public:
-        TrueTypeFont();
-        ~TrueTypeFont();
-        bool loadFont(const char * _fontPath);
-		
-		GlyphInfo getGlyphInfo(uint32_t codePoint, float size, float shift_x = 0.0f, float shift_y = 0.0f);
-		GlyphSize getGlyphSize(uint32_t codePoint, float size);
+class TrueTypeFont
+{
+public:
+	TrueTypeFont();
+	~TrueTypeFont();
 
-        void bakeGlyphAlpha(uint32_t codePoint, float size, uint8_t* outBuffer);
-        void bakeGlyphHinted(uint32_t codePoint, float size, uint32_t* outBuffer);
+	/// Can be initialized with an external buffer
+	/// @remark The ownership of the buffer stays external
+	/// @return true if the initialization succeed
+    bool initFromBuffer(const char* extBuffer);
 
-        stbtt_fontinfo* m_stbFont;
-		void* m_buffer;
-	};	
+	/// Can be initialized with a file path, in that case, a buffer is allocated.
+	/// @return true if the initialization succeed
+	bool initFromFile(const char * fontPath);
+	
+	/// return the details of a glyph
+	GlyphInfo getGlyphInfo(CodePoint_t codePoint, uint16_t pixelSize);
+	/// raster a glyph as 8bit alpha to a memory buffer
+    void bakeGlyphAlpha(const GlyphInfo& glyphInfo, uint16_t pixelSize, uint8_t* outBuffer);
+	/// raster a glyph as 32bit rgba to a memory buffer
+    void bakeGlyphHinted(const GlyphInfo& glyphInfo, uint16_t pixelSize, uint32_t* outBuffer);
+private:
+    stbtt_fontinfo* m_stbFont;
+	const char* m_fileBuffer;
+	bool m_ownBuffer;
+};
 
 }

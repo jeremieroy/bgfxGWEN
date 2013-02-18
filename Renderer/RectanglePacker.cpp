@@ -1,18 +1,37 @@
 #include "RectanglePacker.h"
+#include <assert.h>
 
 namespace bgfx_font
 {
+RectanglePacker::RectanglePacker(): m_width(0), m_height(0), m_usedSpace(0)
+{	
+}
 
-RectanglePacker::RectanglePacker(uint32_t width, uint32_t height):m_width(width), m_height(height)
+RectanglePacker::RectanglePacker(uint32_t width, uint32_t height):m_width(width), m_height(height), m_usedSpace(0)
 {   
     // We want a one pixel border around the whole atlas to avoid any artefact when
     // sampling texture    
     m_skyline.push_back(Node(1,1, width-2));
-	m_usedSpace = 0;
 }
 
 RectanglePacker::~RectanglePacker()
 {
+	
+
+}
+
+void RectanglePacker::init(uint32_t width, uint32_t height)
+{
+	assert(m_width > 2);
+	assert(m_height > 2);
+	m_width = width;
+	m_height = height;
+	m_usedSpace = 0;
+
+	m_skyline.clear();
+	// We want a one pixel border around the whole atlas to avoid any artefact when
+    // sampling texture    
+    m_skyline.push_back(Node(1,1, width-2));
 }
 
 bool RectanglePacker::addRectangle(uint16_t width, uint16_t height, Rect16& outRectangle)

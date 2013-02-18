@@ -17,6 +17,7 @@ namespace bgfx_font
 
 struct Rect16
 {
+	Rect16(){}
     Rect16(uint16_t _x, uint16_t _y, uint16_t _w, uint16_t _h):x(_x), y(_y), w(_w), h(_h) {}
 
     uint16_t x,y;
@@ -26,8 +27,12 @@ struct Rect16
 class RectanglePacker
 { 
 public:
+	RectanglePacker();
 	RectanglePacker(uint32_t width, uint32_t height);
 	~RectanglePacker();
+	
+	/// non constructor initialization
+	void init(uint32_t width, uint32_t height);
 	/// find a suitable position for the given rectangle 
 	/// @return true if the rectangle can be added, false otherwise
 	bool addRectangle(uint16_t width, uint16_t height, Rect16& outRectangle);
