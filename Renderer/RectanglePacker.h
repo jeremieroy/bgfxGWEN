@@ -52,14 +52,14 @@ private:
 
 	struct Node
 	{
-		Node(uint16_t _x, uint16_t _y, uint16_t _width):x(_x), y(_y), width(_width) {} 
+		Node(int16_t _x, int16_t _y, int16_t _width):x(_x), y(_y), width(_width) {} 
     
 		/// The starting x-coordinate (leftmost).
-		uint16_t x;
+		int16_t x;
 		/// The y-coordinate of the skyline level line.
-		uint16_t y;
+		int16_t y;
 		/// The line width. The ending coordinate (inclusive) will be x+width-1.
-		uint32_t width; //32bit to avoid padding
+		int32_t width; //32bit to avoid padding
 	};
 
 	 /// Width (in pixels) of the underlying texture

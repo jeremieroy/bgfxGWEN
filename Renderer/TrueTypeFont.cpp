@@ -78,7 +78,7 @@ bool TrueTypeFont::initFromFile(const char * _fontPath)
 		return false;
 	}
 
-	if( 0 != stbtt_InitFont(m_stbFont, (const unsigned char*) m_fileBuffer, stbtt_GetFontOffsetForIndex((const unsigned char*)m_fileBuffer,0)))
+	if( 0 == stbtt_InitFont(m_stbFont, (const unsigned char*) m_fileBuffer, stbtt_GetFontOffsetForIndex((const unsigned char*)m_fileBuffer,0)))
 	{
 		delete [] m_fileBuffer;
 		m_fileBuffer = NULL;
@@ -107,7 +107,7 @@ GlyphInfo TrueTypeFont::getGlyphInfo(CodePoint_t codePoint, uint16_t pixelSize)
 	// y-increases-up, so CodepointBitmapBox and CodepointBox are inverted.)
 
 	//I'm assuming this is true:
-	assert(x0 == 0);
+	//assert(x0 == 0);
 
 	int ascent, descent, lineGap;
 	// ascent is the coordinate above the baseline the font extends; descent
@@ -123,7 +123,10 @@ GlyphInfo TrueTypeFont::getGlyphInfo(CodePoint_t codePoint, uint16_t pixelSize)
 	// advanceWidth is the offset from the current horizontal position to the next horizontal position
 	// these are expressed in unscaled coordinates
 	stbtt_GetGlyphHMetrics(m_stbFont, glyphIndex, &advanceWidth, &leftSideBearing);
-	return GlyphInfo(x1-x0, y1-y0, leftSideBearing*scale, (float)y0, advanceWidth*scale, (ascent - descent + lineGap) *scale );
+	GlyphInfo inf(x1-x0, y1-y0, leftSideBearing*scale, (float)y0, advanceWidth*scale, (ascent - descent + lineGap) *scale );
+	inf.glyphIndex = glyphIndex;
+	return inf;
+
 }
 
 void TrueTypeFont::bakeGlyphAlpha(const GlyphInfo& glyphInfo, uint16_t pixelSize, uint8_t* outBuffer)

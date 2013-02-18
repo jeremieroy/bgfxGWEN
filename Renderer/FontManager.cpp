@@ -126,6 +126,8 @@ bool FontManager::preloadGlyph(FontHandle handle, const wchar_t* _string)
 			//but only update the bitmap region
 			--rect.w;
 			--rect.h;
+			assert(rect.w == glyphInfo.width);
+			assert(rect.h == glyphInfo.height);
 			
 			// update texture
 			m_texture->update(rect, m_buffer);

@@ -16,6 +16,36 @@
 #include <vector>
 #include "TrueTypeFont.h"
 #include "RectanglePacker.h"
+
+//#define BGFX_CONFIG_USE_TINYSTL 1
+#if BGFX_CONFIG_USE_TINYSTL
+
+namespace tinystl
+{
+	//struct bgfx_allocator
+	//{
+		//static void* static_allocate(size_t _bytes);
+		//static void static_deallocate(void* _ptr, size_t /*_bytes*/);
+	//};
+} // namespace tinystl
+//#	define TINYSTL_ALLOCATOR tinystl::bgfx_allocator
+
+#	include <TINYSTL/string.h>
+#	include <TINYSTL/vector.h>
+#	include <TINYSTL/unordered_map.h>
+//#	include <TINYSTL/unordered_set.h>
+namespace stl = tinystl;
+#else
+#	include <string>
+#	include <unordered_map>
+#	include <unordered_set>
+namespace std { namespace tr1 {} }
+namespace stl {
+	using namespace std;
+	using namespace std::tr1;
+}
+#endif // BGFX_CONFIG_USE_TINYSTL
+
 #include <unordered_map>
 
 namespace bgfx_font
@@ -69,7 +99,7 @@ public:
 	FontHandle loadBakedFont(const char* fontPath);
 
 	/// bake a font to disk (the set of preloaded glyph)
-	/// @return true if the baking succeede, false oherwise
+	/// @return true if the baking succeed, false oherwise
 	bool saveBakedFont(FontHandle handle, const char* fontDirectory, const char* fontName );
 
 	/// Preload a set of glyphs
@@ -90,7 +120,7 @@ private:
 	RectanglePacker m_rectanglePacker;
 	ITextureProvider* m_texture;
 		
-	typedef std::unordered_map<uint32_t, GlyphInfo> GlyphHash_t;
+	typedef stl::unordered_map<uint32_t, GlyphInfo> GlyphHash_t;
 
 	/// font caching
 	struct CachedFont
@@ -106,7 +136,7 @@ private:
 		//float scale;
 		GlyphHash_t cachedGlyphs;
 	};
-	std::vector<CachedFont*> m_cachedFonts;
+	stl::vector<CachedFont*> m_cachedFonts;
 	
 	/*
 	/// file buffer caching	
@@ -125,3 +155,197 @@ private:
 };
 
 }
+
+/*
+// ----------------------------------------------- texture_atlas_set_region ---
+void
+texture_atlas_set_region( texture_atlas_t * self,
+						 const size_t x,
+						 const size_t y,
+						 const size_t width,
+						 const size_t height,
+						 const unsigned char * data,
+						 const size_t stride )
+{
+	assert( self );
+	assert( x > 0);
+	assert( y > 0);
+	assert( x < (self->width-1));
+	assert( (x + width) <= (self->width-1));
+	assert( y < (self->height-1));
+	assert( (y + height) <= (self->height-1));
+
+	size_t i;
+	size_t depth = self->depth;
+	size_t charsize = sizeof(char);
+	for( i=0; i<height; ++i )
+	{
+		memcpy( self->data+((y+i)*self->width + x ) * charsize * depth, 
+			data + (i*stride) * charsize, width * charsize * depth  );
+	}
+}
+
+
+// ------------------------------------------------------ texture_atlas_fit ---
+int
+texture_atlas_fit( texture_atlas_t * self,
+				  const size_t index,
+				  const size_t width,
+				  const size_t height )
+{
+	assert( self );
+
+	ivec3 *node = (ivec3 *) (vector_get( self->nodes, index ));
+	int x = node->x, y, width_left = width;
+	size_t i = index;
+
+	if ( (x + width) > (self->width-1) )
+	{
+		return -1;
+	}
+	y = node->y;
+	while( width_left > 0 )
+	{
+		node = (ivec3 *) (vector_get( self->nodes, i ));
+		if( node->y > y )
+		{
+			y = node->y;
+		}
+		if( (y + height) > (self->height-1) )
+		{
+			return -1;
+		}
+		width_left -= node->z;
+		++i;
+	}
+	return y;
+}
+
+
+// ---------------------------------------------------- texture_atlas_merge ---
+void
+texture_atlas_merge( texture_atlas_t * self )
+{
+	assert( self );
+
+	ivec3 *node, *next;
+	size_t i;
+
+	for( i=0; i< self->nodes->size-1; ++i )
+	{
+		node = (ivec3 *) (vector_get( self->nodes, i ));
+		next = (ivec3 *) (vector_get( self->nodes, i+1 ));
+		if( node->y == next->y )
+		{
+			node->z += next->z;
+			vector_erase( self->nodes, i+1 );
+			--i;
+		}
+	}
+}
+
+
+// ----------------------------------------------- texture_atlas_get_region ---
+ivec4
+texture_atlas_get_region( texture_atlas_t * self,
+						 const size_t width,
+						 const size_t height )
+{
+	assert( self );
+
+	int y, best_height, best_width, best_index;
+	ivec3 *node, *prev;
+	ivec4 region = {{0,0,width,height}};
+	size_t i;
+
+	best_height = INT_MAX;
+	best_index  = -1;
+	best_width = INT_MAX;
+	for( i=0; i<self->nodes->size; ++i )
+	{
+		y = texture_atlas_fit( self, i, width, height );
+		if( y >= 0 )
+		{
+			node = (ivec3 *) vector_get( self->nodes, i );
+			if( ( (y + height) < best_height ) ||
+				( ((y + height) == best_height) && (node->z < best_width)) )
+			{
+				best_height = y + height;
+				best_index = i;
+				best_width = node->z;
+				region.x = node->x;
+				region.y = y;
+			}
+		}
+	}
+
+	if( best_index == -1 )
+	{
+		region.x = -1;
+		region.y = -1;
+		region.width = 0;
+		region.height = 0;
+		return region;
+	}
+
+	node = (ivec3 *) malloc( sizeof(ivec3) );
+	if( node == NULL)
+	{
+		fprintf( stderr,
+			"line %d: No more memory for allocating data\n", __LINE__ );
+		exit( EXIT_FAILURE );
+	}
+	node->x = region.x;
+	node->y = region.y + height;
+	node->z = width;
+	vector_insert( self->nodes, best_index, node );
+	free( node );
+
+	for(i = best_index+1; i < self->nodes->size; ++i)
+	{
+		node = (ivec3 *) vector_get( self->nodes, i );
+		prev = (ivec3 *) vector_get( self->nodes, i-1 );
+
+		if (node->x < (prev->x + prev->z) )
+		{
+			int shrink = prev->x + prev->z - node->x;
+			node->x += shrink;
+			node->z -= shrink;
+			if (node->z <= 0)
+			{
+				vector_erase( self->nodes, i );
+				--i;
+			}
+			else
+			{
+				break;
+			}
+		}
+		else
+		{
+			break;
+		}
+	}
+	texture_atlas_merge( self );
+	self->used += width * height;
+	return region;
+}
+
+
+// ---------------------------------------------------- texture_atlas_clear ---
+void
+texture_atlas_clear( texture_atlas_t * self )
+{
+	assert( self );
+	assert( self->data );
+
+	vector_clear( self->nodes );
+	self->used = 0;
+	// We want a one pixel border around the whole atlas to avoid any artefact when
+	// sampling texture
+	ivec3 node = {{1,1,self->width-2}};
+	vector_push_back( self->nodes, &node );
+	memset( self->data, 0, self->width*self->height*self->depth );
+}
+
+*/

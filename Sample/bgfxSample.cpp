@@ -16,7 +16,7 @@
 #include <common/processevents.h>
 
 #include "TrueTypeFont.h"
-#include "GlyphStash.h"
+#include "FontManager.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -242,14 +242,27 @@ int _main_(int _argc, char** _argv)
 
 
 
-    bgfx_font::TrueTypeFont* font = new  bgfx_font::TrueTypeFont();
-    font->loadFont("c:/windows/fonts/times.ttf");
+    //bgfx_font::TrueTypeFont* font = new  bgfx_font::TrueTypeFont();
+    //font->loadFont("c:/windows/fonts/times.ttf");
 
     TextureProvider_bgfx* text_provider = new TextureProvider_bgfx(512, 512, 1);
-    bgfx_font::GlyphStash stash(text_provider);
+    bgfx_font::FontManager stash(text_provider);
+	for(int i = 16; i < 30; i+=2)
+	{
+		bgfx_font::FontHandle font = stash.loadTrueTypeFont("c:/windows/fonts/times.ttf",0, i);
+		stash.preloadGlyph(font, L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");		
+		bgfx_font::FontHandle font2 = stash.loadTrueTypeFont("c:/windows/fonts/comic.ttf",0, i);
+		stash.preloadGlyph(font2, L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");	
+		bgfx_font::FontHandle font3 = stash.loadTrueTypeFont("c:/windows/fonts/calibri.ttf",0, i);
+		stash.preloadGlyph(font3, L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");	
+	}
+	
 	std::vector<uint8_t> buffer;
 	float emSize = 18.0f;
-	bgfx_font::GlyphInfo glyphInfo = font->getGlyphInfo('a',emSize);
+	//bgfx_font::GlyphInfo glyphInfo;
+	//stash.getGlyphInfo(font, 'a', glyphInfo);
+
+/*
     bgfx_font::Rect16 rect = stash.allocateRegion(glyphSize.width, glyphSize.height);
 	buffer.resize(glyphSize.width*glyphSize.height);
     font->bakeGlyphAlpha('a', emSize, &buffer[0]);
@@ -260,6 +273,7 @@ int _main_(int _argc, char** _argv)
 	buffer.resize(glyphSize.width*glyphSize.height);
     font->bakeGlyphAlpha('M', 192.0f, &buffer[0]);
 	stash.updateRegion(rect, &buffer[0]);
+	*/
 	
 	// Create vertex stream declaration.
 	bgfx::VertexDecl vertexDecl;
@@ -366,7 +380,7 @@ int _main_(int _argc, char** _argv)
 	bgfx::destroyUniform(u_texColor);
 	//bgfx::destroyUniform(u_color0);
 
-	delete font;
+	//delete font;
     delete text_provider;
 	
 	bgfx::destroyProgram(program);
