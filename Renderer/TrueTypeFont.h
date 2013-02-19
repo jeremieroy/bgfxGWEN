@@ -41,17 +41,18 @@ typedef int32_t CodePoint_t;
 
 struct FontInfo
 {
-	/// scale to apply to unscaled coordinates
-	float scale;
-
+	/// Index for faster retrieval
+	uint16_t fontIndex;
+	
 	/// The unscaled coordinate above the baseline the font extends (typically positive)
 	int16_t ascender;
 	/// The unscaled coordinate below the baseline the font extends (typically negative)
 	int16_t descender;
 	/// The unscaled spacing between one row's descent and the next row's ascent
 	int16_t lineGap;
-	/// Index for faster retrieval
-	uint16_t fontIndex;
+
+	/// scale to apply to unscaled coordinates
+	float scale;	
 };
 
 /// A structure that describe a glyph.
@@ -63,6 +64,7 @@ struct GlyphInfo
 
 	/// Glyph's width in pixels.
     uint16_t width;
+
 	/// Glyph's height in pixels.
 	uint16_t height;
 	

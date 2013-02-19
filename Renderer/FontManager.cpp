@@ -20,12 +20,28 @@ FontManager::FontManager(ITextureProvider* texture)
     m_width = texture->getWidth();
 	m_height = texture->getHeight();
 	m_depth = texture->getDepth();
-
+	assert(m_width >= 16 );
+	assert(m_height >= 4 );
 	BGFX_FONT_ASSERT( (m_depth == 1) || (m_depth == 4) , "Incompatible texture depth, must be 1 or 4");
 	m_texture = texture;
 	m_rectanglePacker.init(m_width, m_height);
 
 	m_buffer = new uint8_t[MAX_FONT_BUFFER_SIZE];
+	
+
+	// Create filler glyph
+	Rect16 rect;
+	// We want each glyph to be separated by at least one black pixel
+	assert( m_rectanglePacker.addRectangle(4 + 1, 4 + 1, rect) );
+
+	memset( m_buffer, 255, m_depth * 4 * 4);
+
+	// update texture
+	m_texture->update(rect, m_buffer);
+	m_fillerGlyph.texture_x = rect.x;
+	m_fillerGlyph.texture_y = rect.y;
+	m_fillerGlyph.glyphInfo.width = 4;
+	m_fillerGlyph.glyphInfo.height = 4;
 }
 
 FontManager::~FontManager()
@@ -81,19 +97,19 @@ bool FontManager::preloadGlyph(FontHandle handle, const wchar_t* _string)
 	CachedFont& font = *m_cachedFonts[handle];
 	//if truetype present
 	if(font.trueTypeFont != NULL)
-	{		 
-		//parse string		
+	{
+		//parse string
 		for( size_t i=0, end = wcslen(_string) ; i < end; ++i )
 		{
 			//if glyph cached, continue
 			uint32_t codePoint = _string[i];
-			GlyphHash_t::iterator iter = font.cachedGlyphs.find(codePoint);			
+			GlyphHash_t::iterator iter = font.cachedGlyphs.find(codePoint);
 			if(iter != font.cachedGlyphs.end())
 			{
 				continue;
 			}
 			
-			BakedGlyph bakedGlyph;			
+			BakedGlyph bakedGlyph;
 			// load glyph info
 			bool glyphFound = font.trueTypeFont->getGlyphInfo(font.fontInfo, codePoint, bakedGlyph.glyphInfo);
 			assert(glyphFound);
@@ -129,7 +145,7 @@ bool FontManager::preloadGlyph(FontHandle handle, const wchar_t* _string)
 	return false;
 }
 	
-bool FontManager::getGlyphInfo(FontHandle fontHandle, uint32_t codePoint, GlyphInfo& outInfo)
+bool FontManager::getGlyphInfo(FontHandle fontHandle, uint32_t codePoint, BakedGlyph& outInfo)
 {
 	return false;
 }

@@ -49,14 +49,14 @@ class TextBuffer
 	/// append an ASCII/utf-8 string to the buffer using printf formatting and current pen position and color
 	void appendTextPrintf(FontHandle font, const char * format, ...);
 
-	/// appenda wide char unicode string to the buffer using printf formatting and current pen position and color
+	/// append wide char unicode string to the buffer using printf formatting and current pen position and color
 	void appendTextPrintf(FontHandle font, const wchar_t * format, ...);
 
 	/// Clear the text buffer and reset its state (pen/color)
 	void clearTextBuffer();
 
 private:
-	void appendGlyph(const GlyphInfo& glyphInfo);
+	void appendGlyph(CodePoint_t codePoint, const FontInfo& font, const BakedGlyph& glyphInfo);
 
 	uint32_t m_styleFlags;
 
@@ -67,15 +67,15 @@ private:
 	uint32_t m_underlineColor;
 	uint32_t m_strikeThroughColor;
 
-	//position states
-	float m_originX;
+	//position states	
 	float m_penX;
+	float m_penY;
 
-	int16_t m_originY;	
-	int16_t m_penY;
+	float m_originX;
+	float m_originY;	
 
-	int16_t m_lineDescender;
 	int16_t m_lineAscender;
+	int16_t m_lineDescender;	
 
 	/// 
 	FontManager* m_fontManager;

@@ -120,7 +120,10 @@ public:
 	/// Return the rendering informations about the glyph region
 	/// Load the glyph from a truetype font if possible
 	/// @return true if the Glyph is available
-	bool getGlyphInfo(FontHandle fontHandle, uint32_t codePoint, GlyphInfo& outInfo);	
+	bool getGlyphInfo(FontHandle fontHandle, uint32_t codePoint, BakedGlyph& outInfo);
+
+	/// Return a 4x4 glyph entirely opaque or white opaque.
+	const BakedGlyph& getFillerGlyph();
 
 private:
 
@@ -129,6 +132,8 @@ private:
 	uint32_t m_depth;
 	RectanglePacker m_rectanglePacker;
 	ITextureProvider* m_texture;
+
+	BakedGlyph m_fillerGlyph;
 		
 	typedef stl::unordered_map<uint32_t, BakedGlyph> GlyphHash_t;
 
@@ -138,7 +143,7 @@ private:
 		CachedFont( const FontInfo& _fontInfo, TrueTypeFont* _trueTypeFont = NULL)
 		:fontInfo(_fontInfo), trueTypeFont(_trueTypeFont){}
 		~CachedFont(){ delete trueTypeFont; trueTypeFont = NULL; }
-		//uint16_t flags;
+		
 
 		FontInfo fontInfo;
 		TrueTypeFont* trueTypeFont;
