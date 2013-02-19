@@ -6,8 +6,9 @@
 namespace bgfx_font
 {
 
-TextBuffer::TextBuffer(FontManager* fontManager, VertexBufferProvider* vertexBuffer, IndexBufferProvider* indexBuffer)
-	: m_fontManager(fontManager), m_vertexBuffer(vertexBuffer), m_indexBuffer(indexBuffer)
+const size_t MAX_BUFFERED_CHARACTERS = 8192;
+
+TextBuffer::TextBuffer(FontManager* fontManager) : m_fontManager(fontManager)
 {
 	assert(m_fontManager != NULL);
 	assert(m_vertexBuffer != NULL);
@@ -27,18 +28,26 @@ TextBuffer::TextBuffer(FontManager* fontManager, VertexBufferProvider* vertexBuf
 	m_originY = 0;
 	m_lineAscender = 0;
 	m_lineDescender = 0;
+
+	m_vertexBuffer = new TextVertex[MAX_BUFFERED_CHARACTERS * 4];
+	m_indexBuffer = new uint16_t[MAX_BUFFERED_CHARACTERS * 6];
+	m_vertexCount = 0;
+	m_indexCount = 0;
+	m_lineStartIndex = 0;
 }
 
 TextBuffer::~TextBuffer()
 {
+	delete[] m_vertexBuffer;
+	delete[] m_indexBuffer;
 }
 
-void TextBuffer::appendText(FontHandle font, const char * _string)
+void TextBuffer::appendText(const FontInfo& font, const char * _string)
 {
 
 }
 
-void TextBuffer::appendText(FontHandle font, const wchar_t * _string)
+void TextBuffer::appendText(const FontInfo& font, const wchar_t * _string)
 {
 	BakedGlyph glyph;
 	
@@ -52,16 +61,15 @@ void TextBuffer::appendText(FontHandle font, const wchar_t * _string)
 		{
 			appendGlyph(codePoint, font, glyph);
 		}
-
 	}
 }
 
-void TextBuffer::appendTextPrintf(FontHandle font, const char * format, ...)
+void TextBuffer::appendTextPrintf(const FontInfo& font, const char * format, ...)
 {
 
 }
 
-void TextBuffer::appendTextPrintf(FontHandle font, const wchar_t * format, ...)
+void TextBuffer::appendTextPrintf(const FontInfo& font, const wchar_t * format, ...)
 {
 
 }

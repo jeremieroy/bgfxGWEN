@@ -19,17 +19,27 @@ namespace TextStyleFlags
 	};
 };
 
-struct VertexBufferProvider
+
+struct TextVertex
 {
-	virtual void clear() = 0;
-	virtual void addQuad(float startX, float startY, float endX, float endY, uint16_t s0, uint16_t t0, uint16_t s1, uint16_t t1, uint32_t rgba = 0x000000FF) = 0;
+	void set(int16_t _x, int16_t _y, uint16_t _u, uint16_t _v, uint32_t _rgba)
+	{
+		x = _x; y = _y; 
+		u = _u; v = _v;
+		rgba = _rgba;
+	}
+	int16_t x,y;
+	uint16_t u,v;
+	uint32_t rgba;
 };
 
 class TextBuffer
 {
+public:
+	
 	/// TextBuffer is bound to a fontManager for glyph retrieval
 	/// @remark the ownership of the manager is not taken
-	TextBuffer(FontManager* fontManager, VertexBufferProvider* vertexBuffer, IndexBufferProvider* indexBuffer);
+	TextBuffer(FontManager* fontManager);
 	~TextBuffer();
 
 	void setStyle(uint32_t flags = TextStyleFlags::NORMAL);
@@ -41,19 +51,31 @@ class TextBuffer
 	void setStrikeThroughColor(uint32_t rgba = 0x000000FF);	
 
 	/// append an ASCII/utf-8 string to the buffer using current pen position and color
-	void appendText(FontHandle font, const char * _string);
+	void appendText(const FontInfo& font, const char * _string);
 
 	/// append a wide char unicode string to the buffer using current pen position and color
-	void appendText(FontHandle font, const wchar_t * _string);
+	void appendText(const FontInfo& font, const wchar_t * _string);
 
 	/// append an ASCII/utf-8 string to the buffer using printf formatting and current pen position and color
-	void appendTextPrintf(FontHandle font, const char * format, ...);
+	void appendTextPrintf(const FontInfo& font, const char * format, ...);
 
 	/// append wide char unicode string to the buffer using printf formatting and current pen position and color
-	void appendTextPrintf(FontHandle font, const wchar_t * format, ...);
+	void appendTextPrintf(const FontInfo& font, const wchar_t * format, ...);
 
 	/// Clear the text buffer and reset its state (pen/color)
 	void clearTextBuffer();
+	
+	/// number of vertex in the vertex buffer
+	uint32_t getVertexCount(){ return m_vertexCount; }
+
+	/// get pointer to the vertex buffer to submit it to the graphic card
+	const TextVertex* getVertexBuffer(){ return m_vertexBuffer; }
+
+	/// number of index in the index buffer
+	uint32_t getIndexCount(){ return m_vertexCount; }
+
+	/// get a pointer to the index buffer to submit it to the graphic
+	const uint16_t* getIndexBuffer(){ return m_indexBuffer; }
 
 private:
 	void appendGlyph(CodePoint_t codePoint, const FontInfo& font, const BakedGlyph& glyphInfo);
@@ -77,23 +99,11 @@ private:
 	int16_t m_lineAscender;
 	int16_t m_lineDescender;	
 
-	/// 
+	///
 	FontManager* m_fontManager;
-	//VertexBufferProvider* m_vertexBuffer;
-	struct Vertex
-	{
-		void set(int16_t _x, int16_t _y, uint16_t _u, uint16_t _v, uint32_t _rgba)
-		{
-			x = _x; y = _y; 
-			u = _u; v = _v;
-			rgba = _rgba;
-		}
-		int16_t x,y;
-		uint16_t u,v;
-		uint32_t rgba;
-	};
+
 	
-	Vertex* m_vertexBuffer;
+	TextVertex* m_vertexBuffer;
 	uint16_t* m_indexBuffer;
 	
 	size_t m_vertexCount;
