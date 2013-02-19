@@ -1,13 +1,9 @@
 #pragma once
-/// true type font loader and glyph baker
-/// use stb_truetype
 
 #include <stdint.h> // uint32_t
-struct stbtt_fontinfo; //forward decl.
 
 namespace bgfx_font
 {
-
 
 // Glyph metrics:
 // --------------
@@ -56,19 +52,12 @@ struct FontInfo
 	int16_t lineGap;
 	/// Index for faster retrieval
 	uint16_t fontIndex;
-
-	/// opaque data
-	void* opaque_data;
 };
 
 /// A structure that describe a glyph.
-//TODO separate what is font specific from what's not
+/// TODO handle kerning
 struct GlyphInfo
-{
-	GlyphInfo(){}
-	GlyphInfo(int32_t _glyphIndex, uint16_t _width, uint16_t _height, int16_t _offset_x, int16_t _offset_y, int16_t _advance_x, int16_t _advance_y )
-		: glyphIndex(_glyphIndex), width(_width), height(_height), offset_x(_offset_x), offset_y(_offset_y), advance_x(_advance_x), advance_y(_advance_y) {}
-    
+{	
 	/// Index for faster retrieval
 	int32_t glyphIndex;
 
@@ -76,18 +65,13 @@ struct GlyphInfo
     uint16_t width;
 	/// Glyph's height in pixels.
 	uint16_t height;
-
-	/// Glyph X coordinate in the atlas in pixels
-	//uint16_t texture_x;
-	/// Glyph Y coordinate in the atlas in pixeles
-	//uint16_t texture_y;
 	
 	/// Glyph's left offset in unscaled pixels
     int16_t offset_x;
 
-	/// Glyphs's top offset in unscaled pixels
+	/// Glyph's top offset in unscaled pixels
     /// Remember that this is the distance from the baseline to the top-most
-    /// glyph scanline, upwards y coordinates being positive.
+    /// glyph scan line, upwards y coordinates being positive.
     int16_t offset_y;
 
 	/// For horizontal text layouts, this is the unscaled horizontal distance 
@@ -104,8 +88,7 @@ struct GlyphInfo
     vector_t * kerning;
 
     /// Glyph outline type (0 = None, 1 = line, 2 = inner, 3 = outer)
-    int outline_type;
-	    
+    int outline_type;	    
     /// Glyph outline thickness
     float outline_thickness;
 	*/
@@ -126,20 +109,22 @@ public:
 	/// @return true if the initialization succeed
 	bool initFromFile(const char * fontPath);
 	
-	//    TODO add family etc...
-	/// return NULL if the font doesnt exist
-	const FontInfo* getFontInfo(float pixelSize, uint32_t fontIndex);
+	/// TODO add family etc...
+	/// return false if the font couldn't be found
+	bool getFontInfo(float pixelSize, uint32_t fontIndex, FontInfo& outFontInfo );
 
 	/// return the details of a glyph
-	GlyphInfo getGlyphInfo(const FontInfo& fontInfo, CodePoint_t codePoint);
+	/// return false if the glyph couldn't be found
+	bool getGlyphInfo(const FontInfo& fontInfo, CodePoint_t codePoint, GlyphInfo& outGlyphInfo);
 
 	/// raster a glyph as 8bit alpha to a memory buffer
     void bakeGlyphAlpha(const FontInfo& fontInfo, const GlyphInfo& glyphInfo, uint8_t* outBuffer);
 	/// raster a glyph as 32bit rgba to a memory buffer
     void bakeGlyphHinted(const FontInfo& fontInfo, const GlyphInfo& glyphInfo, uint32_t* outBuffer);
 private:
-	FontInfo* m_fonts; 
+	void* m_fonts;	
 	uint32_t m_fontCount;
+
 	const char* m_fileBuffer;
 	bool m_ownBuffer;
 };

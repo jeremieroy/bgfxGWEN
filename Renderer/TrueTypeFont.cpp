@@ -6,24 +6,19 @@
 #include <stdio.h>
 #include <assert.h>
 //#include <stdlib.h>
-const size_t MAX_SUBFONT_COUNT;
+const size_t MAX_SUBFONT_COUNT = 32;
 namespace bgfx_font
 {
+
 TrueTypeFont::TrueTypeFont(): m_fontCount(0), m_fileBuffer(NULL), m_ownBuffer(false)
-{	
-	m_fonts = new FontInfo[MAX_SUBFONT_COUNT];	
-	memset(m_fonts, 0, MAX_SUBFONT_COUNT* sizeof(FontInfo));
+{
+	m_fonts = new stbtt_fontinfo[MAX_SUBFONT_COUNT];
 }
 
 TrueTypeFont::~TrueTypeFont()
 {
-	for(uint32_t i=0; i < m_fontCount; ++i)
-	{
-		delete ((stbtt_fontinfo*) m_fonts[i].opaque_data);
-	}
-
-	delete [] m_fonts;
-	m_fonts = NULL;	 
+	delete []  ((stbtt_fontinfo*)m_fonts);
+	m_fonts = NULL;
 
 	if(m_ownBuffer) delete [] m_fileBuffer;
 	m_fileBuffer = NULL;
@@ -106,83 +101,81 @@ bool TrueTypeFont::initFromFile(const char * _fontPath)
 	return true;
 }
 
-const FontInfo* TrueTypeFont::getFontInfo(float pixelSize, uint32_t fontIndex)
+bool TrueTypeFont::getFontInfo(float pixelSize, uint32_t fontIndex, FontInfo& outFontInfo )
 {
 	assert(m_fontCount < MAX_SUBFONT_COUNT);
 
-	stbtt_fontinfo* fnt = new stbtt_fontinfo;
-	if( 0 != stbtt_InitFont(fnt, (const unsigned char*) m_fileBuffer, stbtt_GetFontOffsetForIndex((const unsigned char*)m_fileBuffer,fontIndex)))
+	stbtt_fontinfo* fnt = &( ((stbtt_fontinfo*)m_fonts)[m_fontCount] );
+
+	if( 0 == stbtt_InitFont(fnt, (const unsigned char*) m_fileBuffer, stbtt_GetFontOffsetForIndex((const unsigned char*)m_fileBuffer,fontIndex)))
 	{
-		delete fnt;		
-		return NULL;
+		return false;
 	}
 	
 	int ascent, descent, lineGap;	
 	stbtt_GetFontVMetrics(fnt, &ascent, &descent, &lineGap);
-	float scale = stbtt_ScaleForPixelHeight(fnt, pixelSize);
 
-	m_fonts[m_fontCount].opaque_data = fnt;
-	m_fonts[m_fontCount].scale = scale;
-	m_fonts[m_fontCount].ascender = ascent;
-	m_fonts[m_fontCount].descender = descent;
-	m_fonts[m_fontCount].lineGap = lineGap;
-	m_fonts[m_fontCount].fontIndex = m_fontCount;
+	float scale = stbtt_ScaleForPixelHeight(fnt, pixelSize);	
+	
+	outFontInfo.scale = scale;
+	outFontInfo.ascender = ascent;
+	outFontInfo.descender = descent;
+	outFontInfo.lineGap = lineGap;
+	outFontInfo.fontIndex = m_fontCount;
 	m_fontCount++;
-	return &m_fonts[m_fontCount];
+
+	return true;
 }
 
-GlyphInfo TrueTypeFont::getGlyphInfo(CodePoint_t codePoint, uint16_t pixelSize)
+bool TrueTypeFont::getGlyphInfo(const FontInfo& fontInfo, CodePoint_t codePoint, GlyphInfo& outGlyphInfo)
 {
 	assert(m_fileBuffer != NULL && "TrueTypeFont not initialized" );
-	int glyphIndex = stbtt_FindGlyphIndex(m_stbFont,codePoint);
+	stbtt_fontinfo* fnt = &( ((stbtt_fontinfo*)m_fonts)[fontInfo.fontIndex] );
 
-	float scale = stbtt_ScaleForPixelHeight(m_stbFont, (float) pixelSize);
-
+	int glyphIndex = stbtt_FindGlyphIndex(fnt, codePoint);
+	//TODO check glyph validity ?
+	
 	int x0, y0, x1, y1;
 	const float shift_x = 0;
-	const float shift_y = 0;	
-	stbtt_GetGlyphBitmapBoxSubpixel(m_stbFont, glyphIndex, scale, scale, shift_x, shift_y, &x0,&y0,&x1,&y1);
+	const float shift_y = 0;
+	stbtt_GetGlyphBitmapBoxSubpixel(fnt, glyphIndex, fontInfo.scale, fontInfo.scale, shift_x, shift_y, &x0,&y0,&x1,&y1);
 	// get the bbox of the bitmap centered around the glyph origin; so the
 	// bitmap width is x1-x0, height is y1-y0, and location to place
 	// the bitmap top left is (leftSideBearing*scale, y0).
 	// (Note that the bitmap uses y-increases-down, but the shape uses
-	// y-increases-up, so CodepointBitmapBox and CodepointBox are inverted.)
-
-	//I'm assuming this is true:
-	//assert(x0 == 0);
-
-	int ascent, descent, lineGap;
-	// ascent is the coordinate above the baseline the font extends; descent
-	// is the coordinate below the baseline the font extends (i.e. it is typically negative)
-	// lineGap is the spacing between one row's descent and the next row's ascent...
-	// so you should advance the vertical position by "*ascent - *descent + *lineGap"
-	//   these are expressed in unscaled coordinates, so you must multiply by
-	//   the scale factor for a given size	
-	stbtt_GetFontVMetrics(m_stbFont, &ascent, &descent, &lineGap);
-	
+	// y-increases-up, so CodepointBitmapBox and CodepointBox are inverted.)	
+		
 	int advanceWidth, leftSideBearing;
-	// leftSideBearing is the offset from the current horizontal position to the left edge of the character
-	// advanceWidth is the offset from the current horizontal position to the next horizontal position
-	// these are expressed in unscaled coordinates
-	stbtt_GetGlyphHMetrics(m_stbFont, glyphIndex, &advanceWidth, &leftSideBearing);
-	GlyphInfo inf(x1-x0, y1-y0, leftSideBearing*scale, (float)y0, advanceWidth*scale, (ascent - descent + lineGap) *scale );
-	inf.glyphIndex = glyphIndex;
-	return inf;
+	stbtt_GetGlyphHMetrics(fnt, glyphIndex, &advanceWidth, &leftSideBearing);
 
+	int16_t offset_x = leftSideBearing;
+	int16_t offset_y = y0; // ????
+
+	outGlyphInfo.glyphIndex = glyphIndex;
+	outGlyphInfo.width = x1-x0;
+	outGlyphInfo.height = y1-y0;
+	outGlyphInfo.offset_x = offset_x;
+	outGlyphInfo.offset_y = offset_y;
+	outGlyphInfo.advance_x = advanceWidth;
+	outGlyphInfo.advance_y = (fontInfo.ascender - fontInfo.descender + fontInfo.lineGap);
+
+	return true;
 }
 
-void TrueTypeFont::bakeGlyphAlpha(const GlyphInfo& glyphInfo, uint16_t pixelSize, uint8_t* outBuffer)
+void TrueTypeFont::bakeGlyphAlpha(const FontInfo& fontInfo, const GlyphInfo& glyphInfo, uint8_t* outBuffer)
 {
 	assert(m_fileBuffer != NULL && "TrueTypeFont not initialized" );
-    float scale = stbtt_ScaleForPixelHeight(m_stbFont, (float) pixelSize);	
+	stbtt_fontinfo* fnt = &( ((stbtt_fontinfo*)m_fonts)[fontInfo.fontIndex] );
+    
     const float shift_x = 0;
 	const float shift_y = 0;	
-	stbtt_MakeGlyphBitmapSubpixel(m_stbFont, outBuffer, glyphInfo.width, glyphInfo.height, glyphInfo.width, scale, scale, shift_x, shift_y, glyphInfo.glyphIndex);      
+	stbtt_MakeGlyphBitmapSubpixel(fnt, outBuffer, glyphInfo.width, glyphInfo.height, glyphInfo.width, fontInfo.scale, fontInfo.scale, shift_x, shift_y, glyphInfo.glyphIndex);
 }
 
-void TrueTypeFont::bakeGlyphHinted(const GlyphInfo& glyphInfo, uint16_t pixelSize, uint32_t* outBuffer)
+void TrueTypeFont::bakeGlyphHinted(const FontInfo& fontInfo, const GlyphInfo& glyphInfo, uint32_t* outBuffer)
 {
 	assert(m_fileBuffer != NULL && "TrueTypeFont not initialized" );
+	stbtt_fontinfo* fnt = &( ((stbtt_fontinfo*)m_fonts)[fontInfo.fontIndex] );
 }
 
 }

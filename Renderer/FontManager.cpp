@@ -35,37 +35,23 @@ FontManager::~FontManager()
 		delete m_cachedFonts[i];
 	}
 
-	//for(size_t i = 0; i<m_cachedBuffer.size(); ++i)
-	//{
-	//	delete m_cachedBuffer[i];
-	//}
-
 	delete [] m_buffer;
 	m_buffer = NULL;
 }
 
 FontHandle FontManager::loadTrueTypeFont(const char* filePath, uint16_t fontFlags, uint16_t pixelSize)
 {
-	//seek if buffer already loaded
-	/*
-	char* buffer = NULL;
-	for(size_t i = 0; i<m_cachedBuffer.size(); ++ i)
-	{
-		if(0 == strcmp(m_cachedBuffer[i]->filePath, filePath))
-		{
-			buffer = m_cachedBuffer[i]->buffer;
-			break;
-		}
-	}*/
-
-	TrueTypeFont* ttf = new TrueTypeFont();
-	//bool initialized = (buffer != NULL) ? ttf->initFromBuffer(buffer): ttf->initFromFile(filePath);
+	TrueTypeFont* ttf = new TrueTypeFont();	
 	bool initialized = ttf->initFromFile(filePath);
 	
 	if(initialized)
 	{
-		m_cachedFonts.push_back(new CachedFont(pixelSize, fontFlags, ttf));	
-		return (int32_t) m_cachedFonts.size()-1;
+		FontInfo fontInfo;
+		if( ttf->getFontInfo(pixelSize, 0, fontInfo) )
+		{
+			m_cachedFonts.push_back(new CachedFont(fontInfo, ttf));	
+			return (int32_t) m_cachedFonts.size()-1;
+		}
 	}
 
 	delete ttf;
@@ -107,51 +93,35 @@ bool FontManager::preloadGlyph(FontHandle handle, const wchar_t* _string)
 				continue;
 			}
 			
+			BakedGlyph bakedGlyph;			
 			// load glyph info
-			GlyphInfo glyphInfo = font.trueTypeFont->getGlyphInfo(codePoint, font.pixelSize);
+			bool glyphFound = font.trueTypeFont->getGlyphInfo(font.fontInfo, codePoint, bakedGlyph.glyphInfo);
+			assert(glyphFound);
 			//assert font is not too big
-			assert(glyphInfo.width*glyphInfo.height*m_depth < MAX_FONT_BUFFER_SIZE);
+			assert(bakedGlyph.glyphInfo.width*bakedGlyph.glyphInfo.height*m_depth < MAX_FONT_BUFFER_SIZE);
 			//bake glyph to buffer
-			font.trueTypeFont->bakeGlyphAlpha(glyphInfo, font.pixelSize, m_buffer);
+			font.trueTypeFont->bakeGlyphAlpha(font.fontInfo, bakedGlyph.glyphInfo, m_buffer);
 			
 			Rect16 rect;
 			// We want each glyph to be separated by at least one black pixel
-			if(!m_rectanglePacker.addRectangle(glyphInfo.width + 1, glyphInfo.height + 1, rect))
+			if(!m_rectanglePacker.addRectangle(bakedGlyph.glyphInfo.width + 1, bakedGlyph.glyphInfo.height + 1, rect))
 			{
 				return false;
 			}
 
-			glyphInfo.texture_x = rect.x;
-			glyphInfo.texture_y = rect.y;
+			bakedGlyph.texture_x = rect.x;
+			bakedGlyph.texture_y = rect.y;
 			//but only update the bitmap region
 			--rect.w;
 			--rect.h;
-			assert(rect.w == glyphInfo.width);
-			assert(rect.h == glyphInfo.height);
+			assert(rect.w == bakedGlyph.glyphInfo.width);
+			assert(rect.h == bakedGlyph.glyphInfo.height);
 			
 			// update texture
 			m_texture->update(rect, m_buffer);
 			
-			font.cachedGlyphs[codePoint] = glyphInfo;
-			//compute region
-			//GlyphRegion region;
-			/* 
-			region.advance_x = 
-			region.advance_x = 
-			region.x0 = 
-			region.y0 = 
-			region.x1 = 
-			region.y1 = 
-			
-			glyph->offset_x = ft_glyph_left;
-			glyph->offset_y = ft_glyph_top;
-			glyph->s0       = x/(float)width;
-			glyph->t0       = y/(float)height;
-			glyph->s1       = (x + glyph->width)/(float)width;
-			glyph->t1       = (y + glyph->height)/(float)height;
-			*/
 			// store cached glyph
-			//font.cachedGlyphs.insert( std::pair<uint32_t, GlyphRegion>(codePoint, region) );
+			font.cachedGlyphs[codePoint] = bakedGlyph;			
 		}
 		return true;		
 	}
