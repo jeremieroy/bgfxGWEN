@@ -133,7 +133,7 @@ int32_t RectanglePacker::fit(uint32_t skylineNodeIndex, uint16_t _width, uint16_
 	int32_t width_left = width;
 	int32_t i = skylineNodeIndex;
 
-    if ( (x + width) > (m_width-1) )
+    if ( (x + width) > (int32_t)(m_width-1) )
     {
 		return -1;
     }
@@ -145,7 +145,7 @@ int32_t RectanglePacker::fit(uint32_t skylineNodeIndex, uint16_t _width, uint16_
         {
             y = node.y;
         }
-		if( (y + height) > (m_height-1) )
+		if( (y + height) > (int32_t)(m_height-1) )
         {
 			return -1;
         }

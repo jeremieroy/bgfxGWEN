@@ -6,19 +6,27 @@
 #include <stdio.h>
 #include <assert.h>
 //#include <stdlib.h>
-
+const size_t MAX_SUBFONT_COUNT;
 namespace bgfx_font
 {
-TrueTypeFont::TrueTypeFont(): m_fileBuffer(NULL), m_ownBuffer(false)
-{
-	m_stbFont = new stbtt_fontinfo;
+TrueTypeFont::TrueTypeFont(): m_fontCount(0), m_fileBuffer(NULL), m_ownBuffer(false)
+{	
+	m_fonts = new FontInfo[MAX_SUBFONT_COUNT];	
+	memset(m_fonts, 0, MAX_SUBFONT_COUNT* sizeof(FontInfo));
 }
 
 TrueTypeFont::~TrueTypeFont()
 {
+	for(uint32_t i=0; i < m_fontCount; ++i)
+	{
+		delete ((stbtt_fontinfo*) m_fonts[i].opaque_data);
+	}
+
+	delete [] m_fonts;
+	m_fonts = NULL;	 
+
 	if(m_ownBuffer) delete [] m_fileBuffer;
 	m_fileBuffer = NULL;
-	delete m_stbFont;
 }
 
 bool TrueTypeFont::initFromBuffer(const char* extBuffer)
@@ -26,14 +34,21 @@ bool TrueTypeFont::initFromBuffer(const char* extBuffer)
 	if(m_ownBuffer) delete [] m_fileBuffer;
 	m_fileBuffer = extBuffer;
 	m_ownBuffer = false;
+	//TODO check if file is valid
 
-	if( 0 != stbtt_InitFont(m_stbFont, (const unsigned char*) m_fileBuffer, stbtt_GetFontOffsetForIndex((const unsigned char*)m_fileBuffer,0)))
-	{		
+	/*
+	if( 0 == stbtt_InitFont(m_stbFont, (const unsigned char*) m_fileBuffer, stbtt_GetFontOffsetForIndex((const unsigned char*)m_fileBuffer,0)))
+	{
+		delete [] m_fileBuffer;
 		m_fileBuffer = NULL;
+		m_ownBuffer = false;
 		return false;
-	}
+	}*/
+
 	return true;
 }
+
+
 
 bool TrueTypeFont::initFromFile(const char * _fontPath)
 {  
@@ -78,15 +93,42 @@ bool TrueTypeFont::initFromFile(const char * _fontPath)
 		return false;
 	}
 
+	//TODO check if file is valid
+	/*
 	if( 0 == stbtt_InitFont(m_stbFont, (const unsigned char*) m_fileBuffer, stbtt_GetFontOffsetForIndex((const unsigned char*)m_fileBuffer,0)))
 	{
 		delete [] m_fileBuffer;
 		m_fileBuffer = NULL;
 		m_ownBuffer = false;
 		return false;
-	}
+	}*/
 
 	return true;
+}
+
+const FontInfo* TrueTypeFont::getFontInfo(float pixelSize, uint32_t fontIndex)
+{
+	assert(m_fontCount < MAX_SUBFONT_COUNT);
+
+	stbtt_fontinfo* fnt = new stbtt_fontinfo;
+	if( 0 != stbtt_InitFont(fnt, (const unsigned char*) m_fileBuffer, stbtt_GetFontOffsetForIndex((const unsigned char*)m_fileBuffer,fontIndex)))
+	{
+		delete fnt;		
+		return NULL;
+	}
+	
+	int ascent, descent, lineGap;	
+	stbtt_GetFontVMetrics(fnt, &ascent, &descent, &lineGap);
+	float scale = stbtt_ScaleForPixelHeight(fnt, pixelSize);
+
+	m_fonts[m_fontCount].opaque_data = fnt;
+	m_fonts[m_fontCount].scale = scale;
+	m_fonts[m_fontCount].ascender = ascent;
+	m_fonts[m_fontCount].descender = descent;
+	m_fonts[m_fontCount].lineGap = lineGap;
+	m_fonts[m_fontCount].fontIndex = m_fontCount;
+	m_fontCount++;
+	return &m_fonts[m_fontCount];
 }
 
 GlyphInfo TrueTypeFont::getGlyphInfo(CodePoint_t codePoint, uint16_t pixelSize)
