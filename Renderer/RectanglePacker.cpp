@@ -34,14 +34,16 @@ void RectanglePacker::init(uint32_t width, uint32_t height)
     m_skyline.push_back(Node(1,1, width-2));
 }
 
-bool RectanglePacker::addRectangle(uint16_t width, uint16_t height, Rect16& outRectangle)
+bool RectanglePacker::addRectangle(uint16_t width, uint16_t height, uint16_t& outX, uint16_t& outY)
 {
 	int y, best_height, best_index;
     int32_t best_width;
     Node* node;
     Node* prev;
-    Rect16 region(0, 0, width, height);
-    size_t i;
+    outX = 0;
+	outY = 0;
+	
+	size_t i;
 
     best_height = INT_MAX;
     best_index  = -1;
@@ -58,8 +60,8 @@ bool RectanglePacker::addRectangle(uint16_t width, uint16_t height, Rect16& outR
 				best_height = y + height;
 				best_index = i;
 				best_width = node->width;
-				region.x = node->x;
-				region.y = y;
+				outX = node->x;
+				outY = y;
 			}
         }
     }
@@ -69,7 +71,7 @@ bool RectanglePacker::addRectangle(uint16_t width, uint16_t height, Rect16& outR
 		return false;
     }
     
-    Node newNode(region.x,region.y + height, width);
+    Node newNode(outX,outY + height, width);
     m_skyline.insert(m_skyline.begin() + best_index, newNode);
 
     for(i = best_index+1; i < m_skyline.size(); ++i)
@@ -99,7 +101,6 @@ bool RectanglePacker::addRectangle(uint16_t width, uint16_t height, Rect16& outR
 
     merge();
     m_usedSpace += width * height;
-	outRectangle = region;
     return true;
 }
 		

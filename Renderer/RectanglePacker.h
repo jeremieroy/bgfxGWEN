@@ -15,15 +15,6 @@
 namespace bgfx_font
 {
 
-struct Rect16
-{
-	Rect16(){}
-    Rect16(uint16_t _x, uint16_t _y, uint16_t _w, uint16_t _h):x(_x), y(_y), w(_w), h(_h) {}
-
-    uint16_t x,y;
-    uint16_t w,h;
-};
-
 class RectanglePacker
 { 
 public:
@@ -34,8 +25,8 @@ public:
 	/// non constructor initialization
 	void init(uint32_t width, uint32_t height);
 	/// find a suitable position for the given rectangle 
-	/// @return true if the rectangle can be added, false otherwise
-	bool addRectangle(uint16_t width, uint16_t height, Rect16& outRectangle);
+	/// @return true if the rectangle can be added, false otherwise	
+	bool addRectangle(uint16_t width, uint16_t height, uint16_t& outX, uint16_t& outY );
 	/// return the used surface in squared unit
 	uint32_t getUsedSurface() { return m_usedSpace; }
 	/// return the total available surface in squared unit
@@ -44,8 +35,8 @@ public:
 	float getUsageRatio();
 	/// reset to initial state
     void clear();
-private:
 
+private:
 	int32_t fit(uint32_t skylineNodeIndex, uint16_t width, uint16_t height);
 	/// Merges all skyline nodes that are at the same level.
 	void merge();
@@ -71,31 +62,6 @@ private:
 	/// node of the skyline algorithm
     std::vector<Node> m_skyline;
 };
-
-
-/*
-class TextureAtlas
-{
-public:
-	TextureAtlas(ITextureProvider* texture);
-    ~TextureAtlas();
-	/// find a suitable position for the given rectangle 
-	/// @return true if the rectangle can be added, false otherwise
-    bool addRectangle(uint16_t width, uint16_t height, Rect16& outRectangle);
-	/// update the underlying texture
-    void updateRectangle(Rect16 rect, const uint8_t* data);
-	/// return the used surface in squared unit
-	uint32_t getUsedSurface(); 
-	/// return the total available surface in squared unit
-	uint32_t getTotalSurface();
-	/// return the usage ratio of the available surface [0:1]
-	float getUsageRatio();
-	/// reset to initial state
-    void clear();
-private:
-	RectanglePacker m_packer;
-};
-*/
 
 }
 
