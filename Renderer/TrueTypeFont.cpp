@@ -3,48 +3,38 @@
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stb_truetype.h"
 
-#include <stdio.h>
 #include <assert.h>
-//#include <stdlib.h>
-const size_t MAX_SUBFONT_COUNT = 32;
+
 namespace bgfx_font
 {
 
-TrueTypeFont::TrueTypeFont(): m_fontCount(0), m_fileBuffer(NULL), m_ownBuffer(false)
-{
-	m_fonts = new stbtt_fontinfo[MAX_SUBFONT_COUNT];
+TrueTypeFont::TrueTypeFont(): m_font(NULL)
+{	
 }
 
 TrueTypeFont::~TrueTypeFont()
 {
-	delete []  ((stbtt_fontinfo*)m_fonts);
-	m_fonts = NULL;
-
-	if(m_ownBuffer) delete [] m_fileBuffer;
-	m_fileBuffer = NULL;
+	delete m_font;
+	m_font = NULL;
 }
 
-bool TrueTypeFont::initFromBuffer(const char* extBuffer)
+bool TrueTypeFont::init(const uint8_t* buffer, uint32_t size, int32_t fontIndex)
 {
-	if(m_ownBuffer) delete [] m_fileBuffer;
-	m_fileBuffer = extBuffer;
-	m_ownBuffer = false;
-	//TODO check if file is valid
-
-	/*
-	if( 0 == stbtt_InitFont(m_stbFont, (const unsigned char*) m_fileBuffer, stbtt_GetFontOffsetForIndex((const unsigned char*)m_fileBuffer,0)))
+	assert((size > 256 && size < 100000000) && "TrueType buffer size is suspicious");
+	assert(m_font == NULL && "TrueTypeFont already initialized" );
+	
+	stbtt_fontinfo fnt;
+	//check if valid
+	if( 0 == stbtt_InitFont( &fnt, (const unsigned char*) buffer, stbtt_GetFontOffsetForIndex((const unsigned char*)buffer, fontIndex)))
 	{
-		delete [] m_fileBuffer;
-		m_fileBuffer = NULL;
-		m_ownBuffer = false;
 		return false;
-	}*/
+	}
 
+	m_font = new stbtt_fontinfo(fnt);
 	return true;
 }
 
-
-
+/*
 bool TrueTypeFont::initFromFile(const char * _fontPath)
 {  
 	FILE * pFile;
@@ -89,48 +79,58 @@ bool TrueTypeFont::initFromFile(const char * _fontPath)
 	}
 
 	//TODO check if file is valid
-	/*
-	if( 0 == stbtt_InitFont(m_stbFont, (const unsigned char*) m_fileBuffer, stbtt_GetFontOffsetForIndex((const unsigned char*)m_fileBuffer,0)))
-	{
-		delete [] m_fileBuffer;
-		m_fileBuffer = NULL;
-		m_ownBuffer = false;
-		return false;
-	}*/
+	//if( 0 == stbtt_InitFont(m_stbFont, (const unsigned char*) m_fileBuffer, stbtt_GetFontOffsetForIndex((const unsigned char*)m_fileBuffer,0)))
+	//{
+	//	delete [] m_fileBuffer;
+	//	m_fileBuffer = NULL;
+	//	m_ownBuffer = false;
+	//	return false;
+	//}
 
 	return true;
 }
+*/
 
-bool TrueTypeFont::getFontInfo(float pixelSize, uint32_t fontIndex, FontInfo& outFontInfo )
+FontInfo TrueTypeFont::getFontInfoByEmSize(float emSize)
 {
-	assert(m_fontCount < MAX_SUBFONT_COUNT);
+	assert(m_font != NULL && "TrueTypeFont not initialized" );
+	stbtt_fontinfo* fnt = (stbtt_fontinfo*)m_font;
+	
+	int ascent, descent, lineGap;	
+	stbtt_GetFontVMetrics(fnt, &ascent, &descent, &lineGap);
 
-	stbtt_fontinfo* fnt = &( ((stbtt_fontinfo*)m_fonts)[m_fontCount] );
+	float scale = stbtt_ScaleForMappingEmToPixels(fnt, emSize);	
+	
+	FontInfo outFontInfo;
+	outFontInfo.scale = scale;
+	outFontInfo.ascender = ascent;
+	outFontInfo.descender = descent;
+	outFontInfo.lineGap = lineGap;
+	return outFontInfo;
+}
 
-	if( 0 == stbtt_InitFont(fnt, (const unsigned char*) m_fileBuffer, stbtt_GetFontOffsetForIndex((const unsigned char*)m_fileBuffer,fontIndex)))
-	{
-		return false;
-	}
+FontInfo TrueTypeFont::getFontInfoByPixelSize(float pixelSize )
+{
+	assert(m_font != NULL && "TrueTypeFont not initialized" );
+	stbtt_fontinfo* fnt = (stbtt_fontinfo*)m_font;
 	
 	int ascent, descent, lineGap;	
 	stbtt_GetFontVMetrics(fnt, &ascent, &descent, &lineGap);
 
 	float scale = stbtt_ScaleForPixelHeight(fnt, pixelSize);	
 	
+	FontInfo outFontInfo;
 	outFontInfo.scale = scale;
 	outFontInfo.ascender = ascent;
 	outFontInfo.descender = descent;
 	outFontInfo.lineGap = lineGap;
-	outFontInfo.fontIndex = m_fontCount;
-	m_fontCount++;
-
-	return true;
+	return outFontInfo;
 }
 
 bool TrueTypeFont::getGlyphInfo(const FontInfo& fontInfo, CodePoint_t codePoint, GlyphInfo& outGlyphInfo)
 {
-	assert(m_fileBuffer != NULL && "TrueTypeFont not initialized" );
-	stbtt_fontinfo* fnt = &( ((stbtt_fontinfo*)m_fonts)[fontInfo.fontIndex] );
+	assert(m_font != NULL && "TrueTypeFont not initialized" );
+	stbtt_fontinfo* fnt = (stbtt_fontinfo*)m_font;
 
 	int glyphIndex = stbtt_FindGlyphIndex(fnt, codePoint);
 	//TODO check glyph validity ?
@@ -164,8 +164,8 @@ bool TrueTypeFont::getGlyphInfo(const FontInfo& fontInfo, CodePoint_t codePoint,
 
 void TrueTypeFont::bakeGlyphAlpha(const FontInfo& fontInfo, const GlyphInfo& glyphInfo, uint8_t* outBuffer)
 {
-	assert(m_fileBuffer != NULL && "TrueTypeFont not initialized" );
-	stbtt_fontinfo* fnt = &( ((stbtt_fontinfo*)m_fonts)[fontInfo.fontIndex] );
+	assert(m_font != NULL && "TrueTypeFont not initialized" );
+	stbtt_fontinfo* fnt = (stbtt_fontinfo*)m_font;
     
     const float shift_x = 0;
 	const float shift_y = 0;	
@@ -174,8 +174,8 @@ void TrueTypeFont::bakeGlyphAlpha(const FontInfo& fontInfo, const GlyphInfo& gly
 
 void TrueTypeFont::bakeGlyphHinted(const FontInfo& fontInfo, const GlyphInfo& glyphInfo, uint32_t* outBuffer)
 {
-	assert(m_fileBuffer != NULL && "TrueTypeFont not initialized" );
-	stbtt_fontinfo* fnt = &( ((stbtt_fontinfo*)m_fonts)[fontInfo.fontIndex] );
+	assert(m_font != NULL && "TrueTypeFont not initialized" );
+	stbtt_fontinfo* fnt = (stbtt_fontinfo*)m_font;
 }
 
 }

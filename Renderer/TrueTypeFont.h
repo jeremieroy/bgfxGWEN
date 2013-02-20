@@ -40,16 +40,16 @@ namespace bgfx_font
 typedef int32_t CodePoint_t;
 
 struct FontInfo
-{
-	/// Index for faster retrieval
-	uint16_t fontIndex;
-	
+{		
 	/// The unscaled coordinate above the baseline the font extends (typically positive)
 	int16_t ascender;
 	/// The unscaled coordinate below the baseline the font extends (typically negative)
 	int16_t descender;
 	/// The unscaled spacing between one row's descent and the next row's ascent
 	int16_t lineGap;
+
+	/// Index for faster retrieval
+	uint16_t padding;
 
 	/// scale to apply to unscaled coordinates
 	float scale;	
@@ -83,6 +83,12 @@ struct GlyphInfo
 	/// For vertical text layouts, this is the unscaled vertical distance in unscaled coordinates 
     /// used to increment the pen position when the glyph is drawn as part of a string of text.
 	int16_t advance_y;
+
+	/// texture coordinates if glyph is in a texture alias
+	uint16_t texture_x;
+
+	/// texture coordinates if glyph is in a texture alias
+	uint16_t texture_y;
 	
 		
 	/*
@@ -98,37 +104,35 @@ struct GlyphInfo
 	
 class TrueTypeFont
 {
-public:
+public:	
 	TrueTypeFont();
 	~TrueTypeFont();
 
-	/// Can be initialized with an external buffer
-	/// @remark The ownership of the buffer stays external
+	/// Initialize from  an external buffer
+	/// @remark The ownership of the buffer stays external, and you must ensure it stays valid up to this object lifetime
 	/// @return true if the initialization succeed
-    bool initFromBuffer(const char* extBuffer);
+    bool init(const uint8_t* buffer, uint32_t size, int32_t fontIndex = 0);
 
-	/// Can be initialized with a file path, in that case, a buffer is allocated.
-	/// @return true if the initialization succeed
-	bool initFromFile(const char * fontPath);
+	/// return a font descriptor for a given pixelSize
+	FontInfo getFontInfoByPixelSize(float pixelSize);
 	
-	/// TODO add family etc...
-	/// return false if the font couldn't be found
-	bool getFontInfo(float pixelSize, uint32_t fontIndex, FontInfo& outFontInfo );
+	/// return a font descriptor for a given em pixelSize
+	FontInfo getFontInfoByEmSize(float emSize);
 
 	/// return the details of a glyph
 	/// return false if the glyph couldn't be found
 	bool getGlyphInfo(const FontInfo& fontInfo, CodePoint_t codePoint, GlyphInfo& outGlyphInfo);
 
 	/// raster a glyph as 8bit alpha to a memory buffer
+	/// @ remark buffer min size: glyphInfo.width * glyphInfo * height * sizeof(char)
     void bakeGlyphAlpha(const FontInfo& fontInfo, const GlyphInfo& glyphInfo, uint8_t* outBuffer);
-	/// raster a glyph as 32bit rgba to a memory buffer
-    void bakeGlyphHinted(const FontInfo& fontInfo, const GlyphInfo& glyphInfo, uint32_t* outBuffer);
-private:
-	void* m_fonts;	
-	uint32_t m_fontCount;
 
-	const char* m_fileBuffer;
-	bool m_ownBuffer;
+	/// raster a glyph as 32bit rgba to a memory buffer
+	/// @ remark buffer min size: glyphInfo.width * glyphInfo * height * sizeof(uint32_t)
+    void bakeGlyphHinted(const FontInfo& fontInfo, const GlyphInfo& glyphInfo, uint32_t* outBuffer);
+
+private:
+	void* m_font;		
 };
 
 }

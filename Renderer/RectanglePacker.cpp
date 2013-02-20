@@ -16,8 +16,6 @@ RectanglePacker::RectanglePacker(uint32_t width, uint32_t height):m_width(width)
 
 RectanglePacker::~RectanglePacker()
 {
-	
-
 }
 
 void RectanglePacker::init(uint32_t width, uint32_t height)

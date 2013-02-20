@@ -1,8 +1,4 @@
-//#include <stdio.h>
-//#include <stdlib.h>
-//#include <string.h>
 #include <assert.h>
-//#include <limits.h>
 #include "FontManager.h"
 
 #define BGFX_FONT_ASSERT(cond, message) assert((cond) && (message));
@@ -13,10 +9,10 @@ namespace bgfx_font
 const uint32_t MAX_CACHED_FONT = 64;
 const uint32_t MAX_FONT_BUFFER_SIZE = 64*64*4;
 
-FontManager::FontManager(ITextureProvider* texture)
+FontManager::FontManager(ITextureProvider* texture, uint32_t maxGlyphBitmapSize)
 {
 	BGFX_FONT_ASSERT(texture != NULL, "A texture provider cannot be NULL");
-	    
+
     m_width = texture->getWidth();
 	m_height = texture->getHeight();
 	m_depth = texture->getDepth();
@@ -26,26 +22,25 @@ FontManager::FontManager(ITextureProvider* texture)
 	m_texture = texture;
 	m_rectanglePacker.init(m_width, m_height);
 
-	m_buffer = new uint8_t[MAX_FONT_BUFFER_SIZE];
-	
+	m_buffer = new uint8_t[maxGlyphBitmapSize*maxGlyphBitmapSize];
 
 	// Create filler glyph
-	Rect16 rect;
+	uint16_t texture_x, texture_y;
 	// We want each glyph to be separated by at least one black pixel
-	assert( m_rectanglePacker.addRectangle(4 + 1, 4 + 1, rect) );
+	assert( m_rectanglePacker.addRectangle(4 + 1, 4 + 1, texture_x, texture_y) );
 
 	memset( m_buffer, 255, m_depth * 4 * 4);
 
 	// update texture
-	m_texture->update(rect, m_buffer);
-	m_fillerGlyph.texture_x = rect.x;
-	m_fillerGlyph.texture_y = rect.y;
-	m_fillerGlyph.glyphInfo.width = 4;
-	m_fillerGlyph.glyphInfo.height = 4;
+	m_texture->update(texture_x, texture_y, 4, 4, m_buffer);
+	m_fillerGlyph.texture_x = texture_x;
+	m_fillerGlyph.texture_y = texture_y;
+	m_fillerGlyph.width = 4;
+	m_fillerGlyph.height = 4;
 }
 
 FontManager::~FontManager()
-{	
+{
 	for(size_t i = 0; i<m_cachedFonts.size(); ++i)
 	{
 		delete m_cachedFonts[i];
@@ -55,11 +50,11 @@ FontManager::~FontManager()
 	m_buffer = NULL;
 }
 
-FontHandle FontManager::loadTrueTypeFont(const char* filePath, uint16_t fontFlags, uint16_t pixelSize)
+FontHandle FontManager::loadTrueTypeFont(const char* filePath, uint16_t pixelSize)
 {
 	TrueTypeFont* ttf = new TrueTypeFont();	
 	bool initialized = ttf->initFromFile(filePath);
-	
+
 	if(initialized)
 	{
 		FontInfo fontInfo;
@@ -83,7 +78,7 @@ void FontManager::unLoadTrueTypeFont(FontHandle handle)
 }
 
 FontHandle FontManager::loadBakedFont(const char* fontPath)
-{	
+{
 	assert(false); //TODO implement
 	return INVALID_FONT_HANDLE;
 }
@@ -108,47 +103,42 @@ bool FontManager::preloadGlyph(FontHandle handle, const wchar_t* _string)
 			{
 				continue;
 			}
-			
-			BakedGlyph bakedGlyph;
+
+			GlyphInfo bakedGlyph;
 			// load glyph info
-			bool glyphFound = font.trueTypeFont->getGlyphInfo(font.fontInfo, codePoint, bakedGlyph.glyphInfo);
+			bool glyphFound = font.trueTypeFont->getGlyphInfo(font.fontInfo, codePoint, bakedGlyph);
 			assert(glyphFound);
 			//assert font is not too big
-			assert(bakedGlyph.glyphInfo.width*bakedGlyph.glyphInfo.height*m_depth < MAX_FONT_BUFFER_SIZE);
+			assert(bakedGlyph.width*bakedGlyph.height*m_depth < MAX_FONT_BUFFER_SIZE);
 			//bake glyph to buffer
-			font.trueTypeFont->bakeGlyphAlpha(font.fontInfo, bakedGlyph.glyphInfo, m_buffer);
+			font.trueTypeFont->bakeGlyphAlpha(font.fontInfo, bakedGlyph, m_buffer);
 			
-			Rect16 rect;
+			uint16_t texture_x, texture_y;
 			// We want each glyph to be separated by at least one black pixel
-			if(!m_rectanglePacker.addRectangle(bakedGlyph.glyphInfo.width + 1, bakedGlyph.glyphInfo.height + 1, rect))
+			if(!m_rectanglePacker.addRectangle(bakedGlyph.width + 1, bakedGlyph.height + 1,  texture_x, texture_y))
 			{
 				return false;
 			}
 
-			bakedGlyph.texture_x = rect.x;
-			bakedGlyph.texture_y = rect.y;
-			//but only update the bitmap region
-			--rect.w;
-			--rect.h;
-			assert(rect.w == bakedGlyph.glyphInfo.width);
-			assert(rect.h == bakedGlyph.glyphInfo.height);
-			
-			// update texture
-			m_texture->update(rect, m_buffer);
+			bakedGlyph.texture_x = texture_x;
+			bakedGlyph.texture_y = texture_y;
+			//but only update the bitmap region	(not 1 pixel separator)
+			m_texture->update(texture_x, texture_y, bakedGlyph.width, bakedGlyph.height, m_buffer);
 			
 			// store cached glyph
-			font.cachedGlyphs[codePoint] = bakedGlyph;			
+			font.cachedGlyphs[codePoint] = bakedGlyph;
 		}
-		return true;		
+		return true;
 	}
 
 	return false;
 }
-	
-bool FontManager::getGlyphInfo(FontHandle fontHandle, uint32_t codePoint, BakedGlyph& outInfo)
+
+bool FontManager::getGlyphInfo(FontHandle fontHandle, uint32_t codePoint, GlyphInfo& outInfo)
 {
 	return false;
 }
 
+FontInfo& getFontInfo(FontHandle handle);
 
 }
