@@ -103,10 +103,11 @@ public:
     uint16_t getWidth() { return m_width; }
     uint16_t getHeight() { return m_height; }
     uint32_t getDepth() { return m_depth; }
-    
-    void update(bgfx_font::Rect16 rect, const uint8_t* data)
+	bgfx_font::TextureType getTextureType() { return bgfx_font::TEXTURE_ALPHA; }
+
+	void update(uint16_t x, uint16_t y, uint16_t width, uint16_t height, const uint8_t* data)
     {	
-		const bgfx::Memory* mem = bgfx::alloc(rect.w*rect.h*m_depth);
+		const bgfx::Memory* mem = bgfx::alloc(width*height*m_depth);
 		
 		/*
 		const bgfx::Memory* mem = bgfx::alloc(m_width*m_height*m_depth);
@@ -120,8 +121,8 @@ public:
 		}*/
 
 
-		memcpy(mem->data, data, rect.w*rect.h*m_depth);
-		bgfx::updateTexture2D(m_handle, 0, rect.x, rect.y, rect.w, rect.h, mem);
+		memcpy(mem->data, data, width*height*m_depth);
+		bgfx::updateTexture2D(m_handle, 0, x, y, width, height, mem);
 		//bgfx::updateTexture2D(m_handle, 0, 0, 0, m_width,m_height, mem);
     }
 
@@ -239,21 +240,27 @@ int _main_(int _argc, char** _argv)
 	Gwen::Input::Windows GwenInput;
 	GwenInput.Initialize( pCanvas );
     
-
-
-
-    //bgfx_font::TrueTypeFont* font = new  bgfx_font::TrueTypeFont();
+	//bgfx_font::TrueTypeFont* font = new  bgfx_font::TrueTypeFont();
     //font->loadFont("c:/windows/fonts/times.ttf");
 
     TextureProvider_bgfx* text_provider = new TextureProvider_bgfx(512, 512, 1);
-    bgfx_font::FontManager stash(text_provider);
+	bgfx_font::TextureAtlas* atlas = new bgfx_font::TextureAtlas(text_provider);
+	bgfx_font::FontManager stash;
+	stash.addTextureAtlas(atlas);
+	
+	bgfx_font::TrueTypeHandle times_tt = stash.loadTrueTypeFromFile("c:/windows/fonts/times.ttf");
+	bgfx_font::TrueTypeHandle comic_tt = stash.loadTrueTypeFromFile("c:/windows/fonts/comic.ttf");
+	bgfx_font::TrueTypeHandle calibri_tt = stash.loadTrueTypeFromFile("c:/windows/fonts/calibri.ttf");
+
 	for(int i = 16; i < 30; i+=2)
-	{
-		bgfx_font::FontHandle font = stash.loadTrueTypeFont("c:/windows/fonts/times.ttf",0, i);
-		stash.preloadGlyph(font, L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");		
-		bgfx_font::FontHandle font2 = stash.loadTrueTypeFont("c:/windows/fonts/comic.ttf",0, i);
+	{		
+		bgfx_font::FontHandle font = stash.getFontByPixelSize(times_tt, i);
+		stash.preloadGlyph(font, L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");
+		
+		bgfx_font::FontHandle font2 = stash.getFontByPixelSize(comic_tt, i);
 		stash.preloadGlyph(font2, L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");	
-		bgfx_font::FontHandle font3 = stash.loadTrueTypeFont("c:/windows/fonts/calibri.ttf",0, i);
+
+		bgfx_font::FontHandle font3 = stash.getFontByPixelSize(calibri_tt, i);
 		stash.preloadGlyph(font3, L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");	
 	}
 	

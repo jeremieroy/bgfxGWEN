@@ -14,7 +14,7 @@
 #include <stdlib.h> // size_t
 
 #include "TrueTypeFont.h"
-#include "RectanglePacker.h"
+#include "TextureAtlas.h"
 
 #if BGFX_CONFIG_USE_TINYSTL
 namespace tinystl
@@ -45,53 +45,43 @@ namespace stl {
 namespace bgfx_font
 {
 
-/// engine abstraction
-class ITextureProvider
-{
-public:
-	enum TextureType
-	{
-		ALPHA,
-		HINTED,
-		DISTANCE_FIELD
-	};
-
-    virtual uint16_t getWidth() = 0;
-    virtual uint16_t getHeight() = 0;
-    virtual uint32_t getDepth() = 0;
-	virtual TextureType getType() = 0;
-    
-    virtual void update(uint16_t x, uint16_t y, uint16_t width, uint16_t height, const uint8_t* data) = 0;
-    virtual void clear() = 0;
-};
-
 typedef uint32_t FontHandle;
 typedef uint32_t TrueTypeHandle;
+typedef uint32_t TextureAtlasHandle;
 const uint32_t INVALID_HANDLE = -1;
 
 class FontManager
 {
 public:
-	FontManager(ITextureProvider* texture, uint32_t maxGlyphBitmapSize = 64);
+	FontManager(uint32_t maxGlyphBitmapSize = 64);
 	~FontManager();
+
+	/// Add a texture atlas ressource to the font manager
+	/// Up to 4 atlas can be added
+	/// The texture will be used as a texture atlas for storing glyph data
+	/// The ownership of the texture provider stays external
+	TextureAtlasHandle addTextureAtlas(TextureAtlas* atlas);
+
+	/// retrieve a texture atlas ressource using it's handle
+	TextureAtlas* getTextureAtlas(TextureAtlasHandle handle);
 
 	/// load a TrueType font from a file path
 	/// @return INVALID_HANDLE if the loading fail
-	TrueTypeHandle loadTrueTypeFromFile(const char* fontPath);
+	TrueTypeHandle loadTrueTypeFromFile(const char* fontPath, int32_t fontIndex = 0);
 
 	/// load a TrueType font from a given buffer.
 	/// the buffer must stays valid until the font is unloaded or the FontManager is destroyed
 	/// @return INVALID_HANDLE if the loading fail
-	TrueTypeHandle loadTrueTypeFromMemory(const char* buffer, uint32_t size);
+	TrueTypeHandle loadTrueTypeFromMemory(const uint8_t* buffer, uint32_t size, int32_t fontIndex = 0);
 
 	/// unload a TrueType font (free font memory) but keep loaded glyphs
 	void unLoadTrueType(TrueTypeHandle handle);
 
-	/// return a font descriptor whose height is a pixel size
-	FontHandle getFontByPixelSize(TrueTypeHandle handle, float pixelSize );
+	/// return a font descriptor whose height is a fixed pixel size	
+	FontHandle getFontByPixelSize(TrueTypeHandle handle, uint32_t pixelSize, TextureType textureType = TEXTURE_ALPHA);
 	
-	/// return a font descriptor whose height is an em size
-	FontHandle getFontByEmSize(TrueTypeHandle handle, float emSize );
+	/// return a font descriptor whose height is a fiex em size
+	FontHandle getFontByEmSize(TrueTypeHandle handle, uint32_t emSize, TextureType textureType = TEXTURE_ALPHA);
 
 	/// Preload a set of glyphs from a TrueType file
 	/// @return true if every glyph could be preloaded, false otherwise	
@@ -104,49 +94,45 @@ public:
 
 	/// load a baked font (the set of glyph is fixed)
 	/// @return INVALID_HANDLE if the loading fail
-	FontHandle loadBakedFontFromMemory(const char* imageBuffer, uint32_t imageSize, const char* descriptorBuffer, uint32_t descriptorSize);
+	FontHandle loadBakedFontFromMemory(const uint8_t* imageBuffer, uint32_t imageSize, const uint8_t* descriptorBuffer, uint32_t descriptorSize);
 
 	/// bake a font to disk (the set of preloaded glyph)
 	/// @return true if the baking succeed, false otherwise
 	bool saveBakedFont(FontHandle handle, const char* fontDirectory, const char* fontName );
 	
+	/// return the font descriptor of a font
+	/// @remark the handle is required to be valid
+	const FontInfo& getFontInfo(FontHandle handle);
+
 	/// Return the rendering informations about the glyph region
 	/// Load the glyph from a TrueType font if possible
 	/// @return true if the Glyph is available
 	bool getGlyphInfo(FontHandle fontHandle, uint32_t codePoint, GlyphInfo& outInfo);
-
-	/// Return a 4x4 glyph entirely opaque or white opaque.
-	const GlyphInfo& getFillerGlyph() { return m_fillerGlyph; }
-	
-	/// return the font descriptor of a font
-	/// @remark the handle is required to be valid
-	FontInfo& getFontInfo(FontHandle handle){ return m_cachedFonts[handle]->fontInfo; }
-
 private:
-	uint32_t m_width;
-    uint32_t m_height;
-	uint32_t m_depth;
-	RectanglePacker m_rectanglePacker;
-	ITextureProvider* m_texture;
-
-	GlyphInfo m_fillerGlyph;
-
 	typedef stl::unordered_map<uint32_t, GlyphInfo> GlyphHash_t;
 
 	// cache font data
 	struct CachedFont
 	{
-		CachedFont( const FontInfo& _fontInfo, TrueTypeFont* _trueTypeFont = NULL)
-		:fontInfo(_fontInfo), trueTypeFont(_trueTypeFont){}
-		~CachedFont(){ delete trueTypeFont; trueTypeFont = NULL; }
-
 		FontInfo fontInfo;
 		TrueTypeFont* trueTypeFont;
 		GlyphHash_t cachedGlyphs;
-	};
+		uint8_t* fileBuffer;
+	};	
 	stl::vector<CachedFont*> m_cachedFonts;
-	
+
+	struct CachedFile
+	{
+		TrueTypeFont* trueType;
+		uint8_t* buffer;
+	};
+	stl::vector<CachedFile> m_trueType;
+
+	TextureAtlas* m_textures[4];
+	uint32_t m_textureCount;
+
 	uint8_t* m_buffer;
 };
 
 }
+

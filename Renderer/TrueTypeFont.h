@@ -36,7 +36,6 @@ namespace bgfx_font
 //              |                                   |
 //              |------------- advance_x ---------->|
 
-
 typedef int32_t CodePoint_t;
 
 struct FontInfo
@@ -47,9 +46,8 @@ struct FontInfo
 	int16_t descender;
 	/// The unscaled spacing between one row's descent and the next row's ascent
 	int16_t lineGap;
-
-	/// Index for faster retrieval
-	uint16_t padding;
+	/// Categorie of texture container for this font
+	int16_t textureType;
 
 	/// scale to apply to unscaled coordinates
 	float scale;	
@@ -61,7 +59,7 @@ struct GlyphInfo
 {	
 	/// Index for faster retrieval
 	int32_t glyphIndex;
-
+	
 	/// Glyph's width in pixels.
     uint16_t width;
 
@@ -89,6 +87,9 @@ struct GlyphInfo
 
 	/// texture coordinates if glyph is in a texture alias
 	uint16_t texture_y;
+
+	/// Id of the texture in which this glyph is stored
+	uint32_t textureIndex;
 	
 		
 	/*
@@ -112,6 +113,8 @@ public:
 	/// @remark The ownership of the buffer stays external, and you must ensure it stays valid up to this object lifetime
 	/// @return true if the initialization succeed
     bool init(const uint8_t* buffer, uint32_t size, int32_t fontIndex = 0);
+
+	bool isValid() { return m_font!=NULL; }
 
 	/// return a font descriptor for a given pixelSize
 	FontInfo getFontInfoByPixelSize(float pixelSize);

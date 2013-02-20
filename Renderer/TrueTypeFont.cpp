@@ -34,63 +34,6 @@ bool TrueTypeFont::init(const uint8_t* buffer, uint32_t size, int32_t fontIndex)
 	return true;
 }
 
-/*
-bool TrueTypeFont::initFromFile(const char * _fontPath)
-{  
-	FILE * pFile;
-	pFile = fopen (_fontPath, "rb");
-	if (pFile!=NULL)
-	{
-		// Go to the end of the file.
-		if (fseek(pFile, 0L, SEEK_END) == 0)
-		{
-			// Get the size of the file.
-			long bufsize = ftell(pFile);
-			if (bufsize == -1) 
-			{
-				fclose(pFile);
-				return false;
-			}
-			
-			if(m_ownBuffer) delete [] m_fileBuffer;
-			// Allocate buffer
-			m_fileBuffer = new char[bufsize];
-			m_ownBuffer = true;
-
-			// Go back to the start of the file.
-			fseek(pFile, 0L, SEEK_SET);
-
-			// Read the entire file into memory.
-			size_t newLen = fread((void*)m_fileBuffer, sizeof(char), bufsize, pFile);						
-			if (newLen == 0) 
-			{
-				fclose(pFile);
-				delete [] m_fileBuffer;
-				m_fileBuffer = NULL;
-				m_ownBuffer = false;
-				return false;
-			}
-			fclose(pFile);
-		}	
-	}
-	else
-	{
-		return false;
-	}
-
-	//TODO check if file is valid
-	//if( 0 == stbtt_InitFont(m_stbFont, (const unsigned char*) m_fileBuffer, stbtt_GetFontOffsetForIndex((const unsigned char*)m_fileBuffer,0)))
-	//{
-	//	delete [] m_fileBuffer;
-	//	m_fileBuffer = NULL;
-	//	m_ownBuffer = false;
-	//	return false;
-	//}
-
-	return true;
-}
-*/
-
 FontInfo TrueTypeFont::getFontInfoByEmSize(float emSize)
 {
 	assert(m_font != NULL && "TrueTypeFont not initialized" );
@@ -158,6 +101,9 @@ bool TrueTypeFont::getGlyphInfo(const FontInfo& fontInfo, CodePoint_t codePoint,
 	outGlyphInfo.offset_y = offset_y;
 	outGlyphInfo.advance_x = advanceWidth;
 	outGlyphInfo.advance_y = (fontInfo.ascender - fontInfo.descender + fontInfo.lineGap);
+	outGlyphInfo.texture_x = 0;
+	outGlyphInfo.texture_y = 0;
+	outGlyphInfo.textureIndex = 0;
 
 	return true;
 }

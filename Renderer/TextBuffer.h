@@ -51,16 +51,16 @@ public:
 	void setStrikeThroughColor(uint32_t rgba = 0x000000FF);	
 
 	/// append an ASCII/utf-8 string to the buffer using current pen position and color
-	void appendText(const FontInfo& font, const char * _string);
+	void appendText(FontHandle fontHandle, const char * _string);
 
 	/// append a wide char unicode string to the buffer using current pen position and color
-	void appendText(const FontInfo& font, const wchar_t * _string);
+	void appendText(FontHandle fontHandle, const wchar_t * _string);
 
 	/// append an ASCII/utf-8 string to the buffer using printf formatting and current pen position and color
-	void appendTextPrintf(const FontInfo& font, const char * format, ...);
+	void appendTextPrintf(FontHandle fontHandle, const char * format, ...);
 
 	/// append wide char unicode string to the buffer using printf formatting and current pen position and color
-	void appendTextPrintf(const FontInfo& font, const wchar_t * format, ...);
+	void appendTextPrintf(FontHandle fontHandle, const wchar_t * format, ...);
 
 	/// Clear the text buffer and reset its state (pen/color)
 	void clearTextBuffer();
@@ -78,7 +78,7 @@ public:
 	const uint16_t* getIndexBuffer(){ return m_indexBuffer; }
 
 private:
-	void appendGlyph(CodePoint_t codePoint, const FontInfo& font, const BakedGlyph& glyphInfo);
+	void appendGlyph(CodePoint_t codePoint, const FontInfo& font, const GlyphInfo& glyphInfo);
 
 	uint32_t m_styleFlags;
 

@@ -42,34 +42,34 @@ TextBuffer::~TextBuffer()
 	delete[] m_indexBuffer;
 }
 
-void TextBuffer::appendText(const FontInfo& font, const char * _string)
+void TextBuffer::appendText(FontHandle fontHandle, const char * _string)
 {
 
 }
 
-void TextBuffer::appendText(const FontInfo& font, const wchar_t * _string)
+void TextBuffer::appendText(FontHandle fontHandle, const wchar_t * _string)
 {
-	BakedGlyph glyph;
-	
+	GlyphInfo glyph;
+	const FontInfo& font = m_fontManager->getFontInfo(fontHandle);
 	//parse string
 	for( size_t i=0, end = wcslen(_string) ; i < end; ++i )
 	{
 		
 		//if glyph cached, continue
 		uint32_t codePoint = _string[i];
-		if(m_fontManager->getGlyphInfo(font, codePoint, glyph))
+		if(m_fontManager->getGlyphInfo(fontHandle, codePoint, glyph))
 		{
 			appendGlyph(codePoint, font, glyph);
 		}
 	}
 }
 
-void TextBuffer::appendTextPrintf(const FontInfo& font, const char * format, ...)
+void TextBuffer::appendTextPrintf(FontHandle fontHandle, const char * format, ...)
 {
 
 }
 
-void TextBuffer::appendTextPrintf(const FontInfo& font, const wchar_t * format, ...)
+void TextBuffer::appendTextPrintf(FontHandle fontHandle, const wchar_t * format, ...)
 {
 
 }
@@ -79,7 +79,7 @@ void TextBuffer::clearTextBuffer()
 
 }
 
-void TextBuffer::appendGlyph(CodePoint_t codePoint, const FontInfo& font, const BakedGlyph& bakedGlyph)
+void TextBuffer::appendGlyph(CodePoint_t codePoint, const FontInfo& font, const GlyphInfo& glyphInfo)
 {
 	//float gamma = glyphInfo.gamma;
 
@@ -167,18 +167,18 @@ void TextBuffer::appendGlyph(CodePoint_t codePoint, const FontInfo& font, const 
 
 	//handle glyph	
 
-	float x0_precise = m_penX + bakedGlyph.glyphInfo.offset_x * font.scale;
+	float x0_precise = m_penX + glyphInfo.offset_x * font.scale;
 	int16_t x0 = (int16_t)( x0_precise);
-	int16_t y0 = (int16_t)( m_penY + bakedGlyph.glyphInfo.offset_y * font.scale );
-	int16_t x1 = (int16_t)( x0 + bakedGlyph.glyphInfo.width );
-	int16_t y1 = (int16_t)( y0 - bakedGlyph.glyphInfo.height );
+	int16_t y0 = (int16_t)( m_penY + glyphInfo.offset_y * font.scale );
+	int16_t x1 = (int16_t)( x0 + glyphInfo.width );
+	int16_t y1 = (int16_t)( y0 - glyphInfo.height );
 
 	float shift = x0_precise - x0;
 	
-	uint16_t s0 = bakedGlyph.texture_x;
-	uint16_t t0 = bakedGlyph.texture_y;
-	uint16_t s1 = s0 + bakedGlyph.glyphInfo.width;
-	uint16_t t1 = t0 + bakedGlyph.glyphInfo.height;
+	uint16_t s0 = glyphInfo.texture_x;
+	uint16_t t0 = glyphInfo.texture_y;
+	uint16_t s1 = s0 + glyphInfo.width;
+	uint16_t t1 = t0 + glyphInfo.height;
 
 	m_vertexBuffer[m_vertexCount+0].set( x0, y0, s0, t0, m_textColor);
 	m_vertexBuffer[m_vertexCount+1].set( x0, y1, s0, t1, m_textColor);
@@ -195,11 +195,8 @@ void TextBuffer::appendGlyph(CodePoint_t codePoint, const FontInfo& font, const 
 	m_indexCount += 6;
 
 	//vertex_buffer_push_back( buffer, vertices, vcount, indices, icount );
-	m_penX += (bakedGlyph.glyphInfo.advance_x) * font.scale;
-
-
+	m_penX += (glyphInfo.advance_x) * font.scale;
 	/*
-
 	texture_glyph_t *black = texture_font_get_glyph( font, -1 );
 
 
