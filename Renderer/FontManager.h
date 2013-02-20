@@ -74,23 +74,26 @@ class FontManager
 public:
 	FontManager(ITextureProvider* texture, uint32_t maxGlyphBitmapSize = 64);
 	~FontManager();
-	
-	/// load a truetype font from a file path
+
+	/// load a TrueType font from a file path
 	/// @return INVALID_HANDLE if the loading fail
 	TrueTypeHandle loadTrueTypeFromFile(const char* fontPath);
 
-	/// load a truetype font from a given buffer.
+	/// load a TrueType font from a given buffer.
 	/// the buffer must stays valid until the font is unloaded or the FontManager is destroyed
 	/// @return INVALID_HANDLE if the loading fail
 	TrueTypeHandle loadTrueTypeFromMemory(const char* buffer, uint32_t size);
 
-	/// unload a truetype font (free font memory) but keep loaded glyphs
+	/// unload a TrueType font (free font memory) but keep loaded glyphs
 	void unLoadTrueType(TrueTypeHandle handle);
 
+	/// return a font descriptor whose height is a pixel size
 	FontHandle getFontByPixelSize(TrueTypeHandle handle, float pixelSize );
+	
+	/// return a font descriptor whose height is an em size
 	FontHandle getFontByEmSize(TrueTypeHandle handle, float emSize );
 
-	/// Preload a set of glyphs from a truetype file
+	/// Preload a set of glyphs from a TrueType file
 	/// @return true if every glyph could be preloaded, false otherwise	
 	/// if the Font is a baked font, this only do validation on the characters
 	bool preloadGlyph(FontHandle handle, const wchar_t* _string);
@@ -98,17 +101,17 @@ public:
 	/// load a baked font (the set of glyph is fixed)
 	/// @return INVALID_HANDLE if the loading fail
 	FontHandle loadBakedFontFromFile(const char* imagePath, const char* descriptorPath);
-	
+
 	/// load a baked font (the set of glyph is fixed)
 	/// @return INVALID_HANDLE if the loading fail
 	FontHandle loadBakedFontFromMemory(const char* imageBuffer, uint32_t imageSize, const char* descriptorBuffer, uint32_t descriptorSize);
 
 	/// bake a font to disk (the set of preloaded glyph)
-	/// @return true if the baking succeed, false oherwise
+	/// @return true if the baking succeed, false otherwise
 	bool saveBakedFont(FontHandle handle, const char* fontDirectory, const char* fontName );
 	
 	/// Return the rendering informations about the glyph region
-	/// Load the glyph from a truetype font if possible
+	/// Load the glyph from a TrueType font if possible
 	/// @return true if the Glyph is available
 	bool getGlyphInfo(FontHandle fontHandle, uint32_t codePoint, GlyphInfo& outInfo);
 
@@ -127,7 +130,7 @@ private:
 	ITextureProvider* m_texture;
 
 	GlyphInfo m_fillerGlyph;
-		
+
 	typedef stl::unordered_map<uint32_t, GlyphInfo> GlyphHash_t;
 
 	// cache font data
@@ -136,7 +139,7 @@ private:
 		CachedFont( const FontInfo& _fontInfo, TrueTypeFont* _trueTypeFont = NULL)
 		:fontInfo(_fontInfo), trueTypeFont(_trueTypeFont){}
 		~CachedFont(){ delete trueTypeFont; trueTypeFont = NULL; }
-		
+
 		FontInfo fontInfo;
 		TrueTypeFont* trueTypeFont;
 		GlyphHash_t cachedGlyphs;
