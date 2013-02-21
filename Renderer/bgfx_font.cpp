@@ -49,21 +49,73 @@ public:
 struct Context
 {
 	Context():textureUID(0){}
+	
 	bgfx_font::FontManager fontManager;
+	//shaders program
+	bgfx::ProgramHandle basicProgram;	
+	
+	//vertex & index Buffers
+	bgfx::VertexDecl vertexDecl;
+
 	uint32_t textureUID;
 	std::unordered_map< bgfx::TextureHandle, TextureProvider_bgfx*> textureProviders;
 };
 	
 static Context* g_context = NULL;
 
-void init()
+long int fsize(FILE* _file)
+{
+	long int pos = ftell(_file);
+	fseek(_file, 0L, SEEK_END);
+	long int size = ftell(_file);
+	fseek(_file, pos, SEEK_SET);
+	return size;
+}
+
+static const bgfx::Memory* loadShader(const char* _shaderPath, const char* _shaderName)
+{
+	char out[512];
+	strcpy(out, _shaderPath);
+	strcat(out, _shaderName);
+	strcat(out, ".bin");
+
+	FILE* file = fopen(out, "rb");
+	if (NULL != file)
+	{
+		uint32_t size = (uint32_t)fsize(file);
+		const bgfx::Memory* mem = bgfx::alloc(size+1);
+		size_t ignore = fread(mem->data, 1, size, file);
+		BX_UNUSED(ignore);
+		fclose(file);
+		mem->data[mem->size-1] = '\0';
+		return mem;
+	}
+
+	return NULL;
+}
+
+
+void init(const char* shaderPath)
 {
 	assert(g_context == NULL && "A context can only be initialized once");
 	g_context = new Context();
+
+	const bgfx::Memory* mem;
+	mem = loadShader("vs_font_basic");
+	bgfx::VertexShaderHandle vsh = bgfx::createVertexShader(mem);
+	mem = loadShader("fs_font_basic");
+	bgfx::FragmentShaderHandle fsh = bgfx::createFragmentShader(mem);
+	
+	g_context->basicProgram = bgfx::createProgram(vsh, fsh);
+	bgfx::destroyVertexShader(vsh);
+	bgfx::destroyFragmentShader(fsh);
 }
 		
 void shutdown()
 {
+	assert(g_context != NULL && "Context not initialized");
+	bgfx::destroyProgram(g_context->basicProgram);
+
 	delete g_context;
 	g_context = NULL;
 }
