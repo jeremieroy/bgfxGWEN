@@ -78,10 +78,10 @@ public:
 	void unLoadTrueType(TrueTypeHandle handle);
 
 	/// return a font descriptor whose height is a fixed pixel size	
-	FontHandle getFontByPixelSize(TrueTypeHandle handle, uint32_t pixelSize, TextureType textureType = TEXTURE_ALPHA);
+	FontHandle getFontByPixelSize(TrueTypeHandle handle, uint32_t pixelSize, FontType fontType = FONT_TYPE_ALPHA);
 	
 	/// return a font descriptor whose height is a fiex em size
-	FontHandle getFontByEmSize(TrueTypeHandle handle, uint32_t emSize, TextureType textureType = TEXTURE_ALPHA);
+	FontHandle getFontByEmSize(TrueTypeHandle handle, uint32_t emSize, FontType fontType = FONT_TYPE_ALPHA);
 
 	/// Preload a set of glyphs from a TrueType file
 	/// @return true if every glyph could be preloaded, false otherwise	
@@ -135,4 +135,3 @@ private:
 };
 
 }
-

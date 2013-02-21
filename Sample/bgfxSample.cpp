@@ -73,69 +73,7 @@ static const bgfx::Memory* loadTexture(const char* _name)
 }
 
 
-//engine abstraction
-class TextureProvider_bgfx : public bgfx_font::ITextureProvider
-{
-public:
-    TextureProvider_bgfx(uint16_t width, uint16_t height, uint32_t depth): m_width(width), m_height(height), m_depth(depth)
-    {
-		const bgfx::Memory* mem = NULL;// bgfx::alloc(width*height*depth);
-		//memset(mem->data, 0, width*height*depth);
-		uint32_t flags = BGFX_TEXTURE_MIN_POINT|BGFX_TEXTURE_MAG_POINT|BGFX_TEXTURE_U_CLAMP|BGFX_TEXTURE_V_CLAMP;
-		/*
-		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
-		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
-		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
-		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
-		*/
-		//uint32_t flags = BGFX_TEXTURE_NONE;
-		if(depth==1)
-			m_handle = bgfx::createTexture2D(width, height, 1, bgfx::TextureFormat::L8, flags, mem);
-		else
-			m_handle = bgfx::createTexture2D(width, height, 1, bgfx::TextureFormat::BGRA8, flags, mem);		
-    }
 
-	~TextureProvider_bgfx()
-	{
-		bgfx::destroyTexture(m_handle);
-	}
-
-    uint16_t getWidth() { return m_width; }
-    uint16_t getHeight() { return m_height; }
-    uint32_t getDepth() { return m_depth; }
-	bgfx_font::TextureType getTextureType() { return bgfx_font::TEXTURE_ALPHA; }
-
-	void update(uint16_t x, uint16_t y, uint16_t width, uint16_t height, const uint8_t* data)
-    {	
-		const bgfx::Memory* mem = bgfx::alloc(width*height*m_depth);
-		
-		/*
-		const bgfx::Memory* mem = bgfx::alloc(m_width*m_height*m_depth);
-		size_t lineSize = m_width*m_depth;
-		for(int i = 0; i < m_height; ++i)
-		{
-			if(i&1)			
-				memset(mem->data+i*lineSize, 255, lineSize);			
-			else
-				memset(mem->data+i*lineSize, 0, lineSize);
-		}*/
-
-
-		memcpy(mem->data, data, width*height*m_depth);
-		bgfx::updateTexture2D(m_handle, 0, x, y, width, height, mem);
-		//bgfx::updateTexture2D(m_handle, 0, 0, 0, m_width,m_height, mem);
-    }
-
-    void clear()
-    {
-
-    }
-	
-    uint16_t m_width;
-    uint16_t m_height;
-    uint32_t m_depth;
-    bgfx::TextureHandle m_handle;
-};
 
 struct Vertex
 {

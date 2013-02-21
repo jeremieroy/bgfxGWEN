@@ -124,20 +124,45 @@ void FontManager::unLoadTrueType(TrueTypeHandle handle)
 	m_trueType[handle].buffer = NULL;
 }
 
-FontHandle FontManager::getFontByPixelSize(TrueTypeHandle handle, uint32_t pixelSize, TextureType textureType)
+FontHandle FontManager::getFontByPixelSize(TrueTypeHandle handle, uint32_t pixelSize, FontType fontType)
 {
 	assert(handle != INVALID_HANDLE);
 	assert(handle < (TrueTypeHandle)m_trueType.size());
 
+	//search first compatible texture
+	size_t texIdx = 0;
+	for(; texIdx < m_textureCount; ++texIdx)
+	{
+		TextureType texType = m_textures[texIdx]->getTextureType();
+		if(texType == TEXTURE_TYPE_ALPHA && (fontType == FONT_TYPE_ALPHA || fontType == FONT_TYPE_DISTANCE))
+		{
+			break;
+		}
+		if(texType == TEXTURE_TYPE_RGBA && (fontType == FONT_TYPE_RGBA || fontType == FONT_TYPE_HINTED))
+		{
+			break;
+		}
+	}
+
+	if(texIdx == m_textureCount)
+	{ 
+		return false;
+	}
+
 	CachedFont* fnt = new CachedFont;
 	fnt->trueTypeFont = m_trueType[handle].trueType;
 	fnt->fontInfo = fnt->trueTypeFont->getFontInfoByPixelSize((float) pixelSize);
-	fnt->fontInfo.textureType = textureType;
+	fnt->fontInfo.fontType = fontType;
+
+	
+
+	fnt->fontInfo.textureIndex = texIdx;
+
 	m_cachedFonts.push_back(fnt);
 	return 	m_cachedFonts.size()-1;
 }
 	
-FontHandle FontManager::getFontByEmSize(TrueTypeHandle handle, uint32_t emSize, TextureType textureType)
+FontHandle FontManager::getFontByEmSize(TrueTypeHandle handle, uint32_t emSize, FontType fontType)
 {
 	assert(handle != INVALID_HANDLE);
 	assert(handle < (TrueTypeHandle)m_trueType.size());
@@ -145,7 +170,30 @@ FontHandle FontManager::getFontByEmSize(TrueTypeHandle handle, uint32_t emSize, 
 	CachedFont* fnt = new CachedFont;
 	fnt->trueTypeFont = m_trueType[handle].trueType;
 	fnt->fontInfo = fnt->trueTypeFont->getFontInfoByPixelSize((float) emSize);
-	fnt->fontInfo.textureType = textureType;
+	fnt->fontInfo.fontType = fontType;
+
+	//search first compatible texture
+	size_t texIdx = 0;
+	for(; texIdx < m_textureCount; ++texIdx)
+	{
+		
+		TextureType texType = m_textures[texIdx]->getTextureType();
+		if(texType == TEXTURE_TYPE_ALPHA && (fontType == FONT_TYPE_ALPHA || fontType == FONT_TYPE_DISTANCE))
+		{
+			break;
+		}
+		if(texType == TEXTURE_TYPE_RGBA && (fontType == FONT_TYPE_RGBA || fontType == FONT_TYPE_HINTED))
+		{
+			break;
+		}
+	}
+
+	if(texIdx == m_textureCount)
+	{ 
+		return false;
+	}
+
+	fnt->fontInfo.textureIndex = texIdx;
 	m_cachedFonts.push_back(fnt);
 	return 	m_cachedFonts.size()-1;
 }
@@ -158,21 +206,8 @@ bool FontManager::preloadGlyph(FontHandle handle, const wchar_t* _string)
 
 	CachedFont& font = *m_cachedFonts[handle];
 	FontInfo& fontInfo = font.fontInfo;
-
-	//search first compatible texture
-	size_t texIdx = 0;
-	for(; texIdx < m_textureCount; ++texIdx)
-	{
-		if(m_textures[texIdx]->getTextureType() == font.fontInfo.textureType)
-		{
-			break;
-		}
-	}
-
-	if(texIdx == m_textureCount)
-	{ 
-		return false;
-	}
+	TextureAtlas* textureAtlas = m_textures[fontInfo.textureIndex];
+	
 
 	//if truetype present
 	if(font.trueTypeFont != NULL)
@@ -196,12 +231,12 @@ bool FontManager::preloadGlyph(FontHandle handle, const wchar_t* _string)
 			}
 
 			//assert font is not too big
-			assert(glyphInfo.width*glyphInfo.height*m_textures[texIdx]->getDepth() < MAX_FONT_BUFFER_SIZE);
+			assert(glyphInfo.width*glyphInfo.height*textureAtlas->getDepth() < MAX_FONT_BUFFER_SIZE);
 
 			//bake glyph as bitmap to buffer
-			switch(font.fontInfo.textureType)
+			switch(font.fontInfo.fontType)
 			{
-				case TEXTURE_ALPHA:
+			case FONT_TYPE_ALPHA:
 					font.trueTypeFont->bakeGlyphAlpha(fontInfo, glyphInfo, m_buffer);
 				break;
 				default:
@@ -210,11 +245,11 @@ bool FontManager::preloadGlyph(FontHandle handle, const wchar_t* _string)
 			
 			//copy bitmap to texture
 			TextureAtlas::Rectangle rect;
-			m_textures[texIdx]->addBitmap(glyphInfo.width, glyphInfo.height,m_buffer, rect);
+			textureAtlas->addBitmap(glyphInfo.width, glyphInfo.height,m_buffer, rect);
 			
 			glyphInfo.texture_x = rect.x;
 			glyphInfo.texture_x = rect.y;
-			glyphInfo.textureIndex = texIdx;
+			
 						
 			// store cached glyph
 			font.cachedGlyphs[codePoint] = glyphInfo;

@@ -1,59 +1,116 @@
 #pragma once
+#include <bgfx.h> 
 
-namespace bgfx_font
+namespace bgfx_text
 {
+	struct TrueTypeHandle { uint16_t idx; };
+	struct FontHandle { uint16_t idx; };
+	struct TextBufferHandle{ uint16_t idx; };
+	//const uint16_t INVALID_HANDLE = { UINT16_MAX };
+	
+	/// Type of rendering used for the font (determine texture format and shader type)
 	enum FontType
 	{
-		FONT_TYPE_ALPHA, // uint8
-		FONT_TYPE_DISTANCE_FIELD, //uint8
-		FONT_TYPE_RGBA, //0xRRGGBBAA
+		FONT_TYPE_ALPHA    = 0, // L8
+		FONT_TYPE_HINTED   = 1, // BGRA8
+		FONT_TYPE_RGBA     = 2, // BGRA8
+		FONT_TYPE_DISTANCE = 3  // L8
 	};
 
-	/// create a Glyph stash (a.k.a. Font fexture Atlas)
-	/// @param _width width of the texture to be used
-	/// @param _height height of the texture to be used
-	/// @param _depth number of bytes of a pixel. 1 for FONT_TYPE_ALPHA and FONT_TYPE_DISTANCE_FIELD, 4 for FONT_TYPE_RGBA
-	/// @remark the texture is owned by the glyph stash and should not be destroyed
-	GlyphStashHandle createGlyphStash( uint16_t _width, uint16_t _height, uint32_t _depth );
-	
-	/// return the portion of the texture that is used (0 == empty 1.0 == full)
-	float getGlyphStashUsageRatio(GlyphStashHandle _handle);
-	
-	/// return a handle to the texture used by the glyph stash (e.g. for rendering)
-	bgfx::TextureHandle getGlyphStashTexture(GlyphStashHandle _handle);
-	
-	/// destroy the glyph stash and the associated texture
-	void destroyGlyphStash(GlyphStashHandle _handle);
+	/// Type of texture supported for text
+	enum TextureType
+	{
+		TEXTURE_TYPE_ALPHA = 0, // L8
+		TEXTURE_TYPE_RGBA = 1   // BGRA8
+	};
 
-	/// Create a dynamic font from a truetype file, glyph will generated and added to the stash as needed. (most versatile but slowest)
-	/// @param _handle    A handle to the glyph stash to be used for this font
-	/// @param _type,     Type of the font 
-	/// @param _fontPath  A font filename
-	/// @param _size      Size of the font to be created (in points)
-	FontHandle createTrueTypeFont( GlyphStashHandle _handle, FontType _type, const char * _fontPath, const float _size );
+	/// type of vertex and index buffer to use with a TextBuffer
+	enum BufferType
+	{
+		STATIC,
+		DYNAMIQUE ,
+		TRANSIENT
+	};
 
-	/// preload a set of glyph into the stash
-	void preloadGlyph(FontHandle _handle, const wchar_t* _string);
+	/// special style effect (can be combined)
+	enum TextStyle
+	{
+		STYLE_NORMAL           = 0,
+		STYLE_OVERLINE         = 1,
+		STYLE_UNDERLINE        = 1<<1,
+		STYLE_STRIKE_THROUGH   = 1<<2,
+		STYLE_BACKGROUND       = 1<<3,
+	};
+
+	///  initialize bgfx_text library
+	///  Create font rendering shader program, and vertex format.
+	///  @remark assume bgfx is initialized
+	void init();
 	
+	///  shutdown bgfx_text library
+	///  @remark assume bgfx is (still) initialized
+	void shutdown();
+
+	///  allocate a texture of the given type and size
+	bgfx::TextureHandle createTexture(TextureType _textureType, uint16_t _width, uint16_t _height);
+	
+	///  destroy a texture
+	void destroyTexture(bgfx::TextureHandle _handle);
+		
+	/// Load a truetype ressource from a file, glyph can generated if the font is loaded
+	TrueTypeHandle loadTrueTypeFont(const char * _fontPath);
+	
+	/// Load a truetype ressource from a buffer, glyph can generated if the font is loaded
+	TrueTypeHandle loadTrueTypeFont(const bgfx::Memory* _mem);
+	
+	/// free the ressource allocated for the font (but keep loaded glyph)
+	void unloadTrueTypeFont(TrueTypeHandle _handle);
+		
+	/// return a font descriptor to a truetype font whose height is a fixed pixel size	
+	FontHandle getFontByPixelSize(TrueTypeHandle _handle, uint32_t _pixelSize, FontType _fontType = FONT_TYPE_ALPHA);
+	
+	/// return a font descriptor to a truetype font whose height is a fixed em size
+	FontHandle getFontByEmSize(TrueTypeHandle _handle, uint32_t _emSize, FontType _fontType = FONT_TYPE_ALPHA);
+
+	/// Load a baked font and return a font descriptor corresponding to a baked font
+	FontHandle loadBakedFont(const char * _fontPath, const char * _fontName);
+	//TODO load from a given buffer
+
+	/// Preload a set of glyphs from a TrueType file
+	/// @return true if every glyph could be preloaded, false otherwise
+	/// if the Font is a baked font, this only do validation on the characters
+	bool preloadGlyph(FontHandle _handle, const wchar_t* _string);
+
 	/// bake a font and save it to disk
-	void bakeAndSaveFont(FontHandle _handle, const char* _outputDir, const char* _fontName);
-
-	/// create a static font with a fixed set of available glyph from a previously baked font. (fastest but limited)
-	FontHandle createBakedFont(GlyphStashHandle _handle, const char* _inputDir, const char* _fontName);
-
-	/// create a text buffer with the specified font type. It will only be compatible with font of the same type.
-	TextBufferHandle createTextBuffer(FontType _type, uint32_t _maxCharacterCount);
+	void bakeAndSaveFont(FontHandle _handle, const char * _fontPath, const char * _fontName);
+		
+	/// Create a text buffer of the specified font type. It will only be compatible with fonts of the same type.
+	TextBufferHandle createTextBuffer(FontType _type, BufferType bufferType, uint32_t _maxCharacterCount);
+	
+	/// Destroy a text buffer
 	void destroyTextBuffer(TextBufferHandle _handle);
 
-	/// because getTextBufferBuffer would be silly...
-	const Memory* getTextBufferContent(TextBufferHandle _handle);
+	/// Set the current style state of the text buffer
+	void setTextStyle(TextBufferHandle _handle, uint32_t flags = STYLE_NORMAL);
 
-	/// Set the color state of the text to be added to the buffer
+	/// Set the current text color state of the text buffer
 	void setTextColor(TextBufferHandle _handle, uint32_t _rgba = 0x000000ff);
+	
+	/// Set the current background color state of the text buffer
+	void setTextBackgroundColor(TextBufferHandle _handle, uint32_t rgba = 0x000000FF);
 
-	/// Set the position of the pen
-	void setTextPen(TextBufferHandle _handle, float x, float y);
+	/// Set the overline color state of the text buffer
+	void setOverlineColor(TextBufferHandle _handle,uint32_t rgba = 0x000000FF);
 
+	/// Set the underline color state of the text buffer
+	void setUnderlineColor(TextBufferHandle _handle,uint32_t rgba = 0x000000FF);
+	
+	/// Set the strike trough color state of the text buffer
+	void setStrikeThroughColor(TextBufferHandle _handle,uint32_t rgba = 0x000000FF);
+	
+	/// Set the pen position state of the text buffer
+	void setPenPosition(TextBufferHandle _handle, float x, float y);
+	
 	/// append an ASCII/utf-8 string to the buffer using current pen position and color
 	void appendText(TextBufferHandle _handle, const char * _string);
 
@@ -68,21 +125,11 @@ namespace bgfx_font
 
 	/// Clear the text buffer and reset its state (pen/color)
 	void clearTextBuffer(TextBufferHandle _handle);
-
-	///  initialize bgfx_font library
-	///  Create font rendering shader program, and vertex format.
-	///  @remark assume bgfx is initialized
-	void init();
-
-	///  shutdown bgfx_font library
-	///  @remark assume bgfx is still initialized
-	void shutdown();
-
+	
 	/// submit the text buffer for rendering
-	void submitTextBuffer(uint8_t _id, int32_t _depth = 0);
+	void submitTextBuffer(TextBufferHandle _handle, uint8_t _id, int32_t _depth = 0);
 
 	/// Submit the text buffer for rendering into multiple views.
-	void submitTextBufferMask(uint32_t _viewMask, int32_t _depth = 0);
-
-	/// TODO think about transient vs static text buffer
+	void submitTextBufferMask(TextBufferHandle _handle, uint32_t _viewMask, int32_t _depth = 0);
 }
+

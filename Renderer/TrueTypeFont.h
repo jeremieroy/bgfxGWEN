@@ -38,6 +38,15 @@ namespace bgfx_font
 
 typedef int32_t CodePoint_t;
 
+/// Type of rendering used for the font (determine texture format and shader type)
+enum FontType
+{
+	FONT_TYPE_ALPHA    = 0, // L8
+	FONT_TYPE_HINTED   = 1, // BGRA8
+	FONT_TYPE_RGBA     = 2, // BGRA8
+	FONT_TYPE_DISTANCE = 3  // L8
+};
+
 struct FontInfo
 {		
 	/// The unscaled coordinate above the baseline the font extends (typically positive)
@@ -46,8 +55,11 @@ struct FontInfo
 	int16_t descender;
 	/// The unscaled spacing between one row's descent and the next row's ascent
 	int16_t lineGap;
-	/// Categorie of texture container for this font
-	int16_t textureType;
+	/// Rendering type used for the font
+	int16_t fontType;
+
+	/// Id of the texture in which this glyph is stored
+	uint32_t textureIndex;
 
 	/// scale to apply to unscaled coordinates
 	float scale;	
@@ -87,10 +99,6 @@ struct GlyphInfo
 
 	/// texture coordinates if glyph is in a texture alias
 	uint16_t texture_y;
-
-	/// Id of the texture in which this glyph is stored
-	uint32_t textureIndex;
-	
 		
 	/*
     /// A vector of kerning pairs relative to this glyph.
