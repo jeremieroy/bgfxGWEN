@@ -191,21 +191,23 @@ int _main_(int _argc, char** _argv)
 	bgfx_font::TrueTypeHandle comic_tt = bgfx_font::loadTrueTypeFont("c:/windows/fonts/comic.ttf");
 	bgfx_font::TrueTypeHandle calibri_tt = bgfx_font::loadTrueTypeFont("c:/windows/fonts/calibri.ttf");
 
+	std::vector<bgfx_font::FontHandle> fonts;
 	for(int i = 16; i < 30; i+=2)
 	{		
 		bgfx_font::FontHandle font = bgfx_font::getFontByPixelSize(times_tt, i);
 		bgfx_font::preloadGlyph(font, L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");
+		fonts.push_back(font);
 		
 		bgfx_font::FontHandle font2 = bgfx_font::getFontByPixelSize(comic_tt, i);
 		bgfx_font::preloadGlyph(font2, L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");	
+		fonts.push_back(font2);
 
 		bgfx_font::FontHandle font3 = bgfx_font::getFontByPixelSize(calibri_tt, i);
 		bgfx_font::preloadGlyph(font3, L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");	
+		fonts.push_back(font3);
 	}
 
-	bgfx_font::unloadTrueTypeFont(times_tt);
-	bgfx_font::unloadTrueTypeFont(comic_tt);
-	bgfx_font::unloadTrueTypeFont(calibri_tt);
+	
 	
 	std::vector<uint8_t> buffer;
 	float emSize = 18.0f;
@@ -332,6 +334,16 @@ int _main_(int _argc, char** _argv)
 
 	bgfx::destroyProgram(program);
 
+
+	bgfx_font::unloadTrueTypeFont(times_tt);
+	bgfx_font::unloadTrueTypeFont(comic_tt);
+	bgfx_font::unloadTrueTypeFont(calibri_tt);
+
+	for(size_t i=0; i<fonts.size();++i)
+	{
+		bgfx_font::destroyFont(fonts[i]);
+	}
+	bgfx_font::destroyTextureAtlas(atlas);
 	bgfx_font::shutdown();
 	// Shutdown bgfx.
     bgfx::shutdown();

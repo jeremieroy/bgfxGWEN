@@ -190,6 +190,11 @@ FontHandle loadBakedFont(const char * _fontPath, const char * _fontName)
 	return FontHandle(INVALID_HANDLE_ID);
 }
 
+void destroyFont(FontHandle _handle)
+{
+	g_context->fontManager.destroyFont(_handle);
+}
+
 bool preloadGlyph(FontHandle _handle, const wchar_t* _string)
 {
 	assert(g_context != NULL && "Context not initialized. Call bgfx_text::init(); ");

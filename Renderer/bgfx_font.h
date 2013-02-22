@@ -43,6 +43,8 @@ namespace bgfx_font
 	FontHandle loadBakedFont(const char * _fontPath, const char * _fontName);
 	//TODO load from a given buffer
 
+	void destroyFont(FontHandle _handle);
+
 	/// Preload a set of glyphs from a TrueType file
 	/// @return true if every glyph could be preloaded, false otherwise
 	/// if the Font is a baked font, this only do validation on the characters

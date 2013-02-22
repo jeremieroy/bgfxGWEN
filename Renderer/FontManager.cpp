@@ -28,11 +28,10 @@ FontManager::~FontManager()
 	assert(m_filesHandles.getNumHandles() == 0 && "All the files must be destroyed before destroying the manager");
 	delete [] m_cachedFiles;
 
-	assert(m_atlasHandles.getNumHandles() == 0 && "All the texture must be destroyed before destroying the manager");
-	delete [] m_cachedFiles;
+	assert(m_atlasHandles.getNumHandles() == 0 && "All the texture atlas must be destroyed before destroying the manager");
+	delete [] m_atlas;
 
 	delete [] m_buffer;
-	m_buffer = NULL;
 }
 
 TextureAtlasHandle FontManager::createTextureAtlas(TextureType type, uint16_t width, uint16_t height)
