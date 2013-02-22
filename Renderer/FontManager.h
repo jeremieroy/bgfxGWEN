@@ -10,11 +10,14 @@
 /// algorithm based on C++ sources provided by Jukka Jylänki at:
 /// http://clb.demon.fi/files/RectangleBinPack/
 
-#include <stdint.h> // uint32_t
-#include <stdlib.h> // size_t
-
+#include "bgfx_font_types.h"
 #include "TrueTypeFont.h"
-#include "TextureAtlas.h"
+#include "RectanglePacker.h"
+//#include "TextureAtlas.h"
+
+#include <bx/handlealloc.h>
+
+#include <stdlib.h> // size_t
 
 #if BGFX_CONFIG_USE_TINYSTL
 namespace tinystl
@@ -26,13 +29,10 @@ namespace tinystl
 	//};
 } // namespace tinystl
 //#	define TINYSTL_ALLOCATOR tinystl::bgfx_allocator
-
-#	include <TINYSTL/vector.h>
 #	include <TINYSTL/unordered_map.h>
 //#	include <TINYSTL/unordered_set.h>
 namespace stl = tinystl;
 #else
-#	include <vector>
 #	include <unordered_map>
 namespace std { namespace tr1 {} }
 namespace stl {
@@ -45,25 +45,32 @@ namespace stl {
 namespace bgfx_font
 {
 
-typedef uint32_t FontHandle;
-typedef uint32_t TrueTypeHandle;
-typedef uint32_t TextureAtlasHandle;
-const uint32_t INVALID_HANDLE = -1;
+/// engine abstraction
+class ITextureFactory
+{
+public:
+	virtual uint16_t createTexture(uint16_t width, uint16_t height, TextureType textureType) = 0;
+	virtual void destroyTexture(uint16_t textureHandle) = 0;
+    virtual void update(uint16_t textureHandle, uint16_t x, uint16_t y, uint16_t width, uint16_t height, const uint8_t* data) = 0;
+};
 
 class FontManager
 {
 public:
-	FontManager(uint32_t maxGlyphBitmapSize = 64);
+	FontManager(ITextureFactory* textureFactory, uint32_t maxGlyphBitmapSize = 64);
 	~FontManager();
 
 	/// Add a texture atlas ressource to the font manager
 	/// Up to 4 atlas can be added
 	/// The texture will be used as a texture atlas for storing glyph data
 	/// The ownership of the texture provider stays external
-	TextureAtlasHandle addTextureAtlas(TextureAtlas* atlas);
+	TextureAtlasHandle createTextureAtlas(uint16_t width, uint16_t height, TextureType type );
+	
+	/// retrieve a texture ressource using the atlas handle
+	uint16_t getTextureHandle(TextureAtlasHandle handle);
 
-	/// retrieve a texture atlas ressource using it's handle
-	TextureAtlas* getTextureAtlas(TextureAtlasHandle handle);
+	/// destroy a texture atlas
+	void destroyTextureAtlas(TextureAtlasHandle handle);
 
 	/// load a TrueType font from a file path
 	/// @return INVALID_HANDLE if the loading fail
@@ -78,16 +85,11 @@ public:
 	void unLoadTrueType(TrueTypeHandle handle);
 
 	/// return a font descriptor whose height is a fixed pixel size	
-	FontHandle getFontByPixelSize(TrueTypeHandle handle, uint32_t pixelSize, FontType fontType = FONT_TYPE_ALPHA);
+	FontHandle createFontByPixelSize(TrueTypeHandle handle, uint32_t pixelSize, FontType fontType = FONT_TYPE_ALPHA);
 	
 	/// return a font descriptor whose height is a fiex em size
-	FontHandle getFontByEmSize(TrueTypeHandle handle, uint32_t emSize, FontType fontType = FONT_TYPE_ALPHA);
-
-	/// Preload a set of glyphs from a TrueType file
-	/// @return true if every glyph could be preloaded, false otherwise	
-	/// if the Font is a baked font, this only do validation on the characters
-	bool preloadGlyph(FontHandle handle, const wchar_t* _string);
-
+	FontHandle createFontByEmSize(TrueTypeHandle handle, uint32_t emSize, FontType fontType = FONT_TYPE_ALPHA);
+		
 	/// load a baked font (the set of glyph is fixed)
 	/// @return INVALID_HANDLE if the loading fail
 	FontHandle loadBakedFontFromFile(const char* imagePath, const char* descriptorPath);
@@ -95,6 +97,14 @@ public:
 	/// load a baked font (the set of glyph is fixed)
 	/// @return INVALID_HANDLE if the loading fail
 	FontHandle loadBakedFontFromMemory(const uint8_t* imageBuffer, uint32_t imageSize, const uint8_t* descriptorBuffer, uint32_t descriptorSize);
+
+	/// destroy a font (truetype or baked)
+	void destroyFont(FontHandle _handle);
+
+	/// Preload a set of glyphs from a TrueType file
+	/// @return true if every glyph could be preloaded, false otherwise	
+	/// if the Font is a baked font, this only do validation on the characters
+	bool preloadGlyph(FontHandle handle, const wchar_t* _string);
 
 	/// bake a font to disk (the set of preloaded glyph)
 	/// @return true if the baking succeed, false otherwise
@@ -109,28 +119,43 @@ public:
 	/// @return true if the Glyph is available
 	bool getGlyphInfo(FontHandle fontHandle, uint32_t codePoint, GlyphInfo& outInfo);
 private:
-	typedef stl::unordered_map<uint32_t, GlyphInfo> GlyphHash_t;
-
+	
+	typedef stl::unordered_map<uint32_t, GlyphInfo> GlyphHash_t;	
 	// cache font data
 	struct CachedFont
 	{
 		FontInfo fontInfo;
-		TrueTypeFont* trueTypeFont;
 		GlyphHash_t cachedGlyphs;
-		uint8_t* fileBuffer;
-	};	
-	stl::vector<CachedFont*> m_cachedFonts;
-
+		TrueTypeFont* trueTypeFont;
+		//uint8_t* fileBuffer;
+	};
+	bx::HandleAlloc m_fontHandles;
+	CachedFont* m_cachedFonts;
+	
 	struct CachedFile
 	{
 		TrueTypeFont* trueType;
 		uint8_t* buffer;
+	};	
+	bx::HandleAlloc m_filesHandles;
+	CachedFile* m_cachedFiles;	
+
+	ITextureFactory* m_textureFactory;
+
+	struct TextureAtlas
+	{
+		TextureType type;
+		RectanglePacker rectanglePacker;
+		uint16_t textureHandle;
+		uint16_t depth;
 	};
-	stl::vector<CachedFile> m_trueType;
+	
+	TextureAtlas* m_atlas;
+	bx::HandleAlloc m_atlasHandles;	
 
-	TextureAtlas* m_textures[4];
-	uint32_t m_textureCount;
+	bool addBitmap(TextureAtlas& atlas, uint16_t width, uint16_t height, const uint8_t* data, uint16_t& x, uint16_t& y);
 
+	//temporary buffer to raster glyph
 	uint8_t* m_buffer;
 };
 

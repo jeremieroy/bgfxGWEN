@@ -5,46 +5,92 @@
 
 namespace bgfx_font
 {
+const uint16_t MAX_OPENED_FILES = 64;
+const uint16_t MAX_OPENED_FONT = 64;
+const uint16_t MAX_TEXTURE_ATLAS = 4;
 
-const uint32_t MAX_CACHED_FONT = 64;
-const uint32_t MAX_FONT_BUFFER_SIZE = 64*64*4;
+const uint32_t MAX_FONT_BUFFER_SIZE = 128*128*4;
 
-FontManager::FontManager(uint32_t maxGlyphBitmapSize)
+FontManager::FontManager(ITextureFactory* textureFactory, uint32_t maxGlyphBitmapSize):
+m_textureFactory(textureFactory),m_filesHandles(MAX_OPENED_FILES), m_fontHandles(MAX_OPENED_FONT), m_atlasHandles(MAX_TEXTURE_ATLAS)
 {
+	m_cachedFiles = new CachedFile[MAX_OPENED_FILES];
+	m_cachedFonts = new CachedFont[MAX_OPENED_FONT];
+	m_atlas = new TextureAtlas[MAX_TEXTURE_ATLAS];
 	m_buffer = new uint8_t[maxGlyphBitmapSize*maxGlyphBitmapSize];
-	m_textureCount = 0;
 }
 
 FontManager::~FontManager()
-{
-	for(size_t i = 0; i<m_cachedFonts.size(); ++i)
-	{
-		delete m_cachedFonts[i];
-	}
+{	
+	assert(m_fontHandles.getNumHandles() == 0 && "All the fonts must be destroyed before destroying the manager");
+	delete [] m_cachedFonts;
 
-	for(size_t i = 0; i<m_trueType.size(); ++i)
-	{		
-		delete m_trueType[i].trueType;
-		delete m_trueType[i].buffer;
-	}
+	assert(m_filesHandles.getNumHandles() == 0 && "All the files must be destroyed before destroying the manager");
+	delete [] m_cachedFiles;
+
+	assert(m_atlasHandles.getNumHandles() == 0 && "All the texture must be destroyed before destroying the manager");
+	delete [] m_cachedFiles;
 
 	delete [] m_buffer;
 	m_buffer = NULL;
 }
 
-TextureAtlasHandle FontManager::addTextureAtlas(TextureAtlas* atlas)
+TextureAtlasHandle FontManager::createTextureAtlas(uint16_t width, uint16_t height, TextureType type)
 {
-	assert(atlas != NULL && "Texture atlas cannot be NULL");
-	assert(m_textureCount < 4 && "You cannot add more than 4 texture atlas");
-	m_textures[m_textureCount] = atlas;	
-	return m_textureCount++;
+	uint16_t textureHandle = m_textureFactory->createTexture(width, height, type);
+	assert(textureHandle != INT16_MAX);
+
+	assert(width >= 16 );
+	assert(height >= 4 );
+
+	uint16_t atlasIdx = m_filesHandles.alloc();
+	assert(atlasIdx != bx::HandleAlloc::invalid);
+	m_atlas[atlasIdx].textureHandle = textureHandle;
+	m_atlas[atlasIdx].rectanglePacker.init(width, height);
+	m_atlas[atlasIdx].depth = (type == TEXTURE_TYPE_ALPHA)?1:4;
+
+	// Create filler rectangle
+	uint8_t buffer[4*4*4];
+	memset( buffer, 255, 4 * 4 * 4);
+	m_textureFactory->update(textureHandle, 1,1,width, height, buffer);
+	uint16_t x,y;
+	m_atlas[atlasIdx].rectanglePacker.addRectangle(4 + 1, 4 + 1,  x,y);
+	
+	return TextureAtlasHandle(atlasIdx);
 }
 
-TextureAtlas* FontManager::getTextureAtlas(TextureAtlasHandle handle)
+uint16_t FontManager::getTextureHandle(TextureAtlasHandle handle)
 {
-	assert(handle != INVALID_HANDLE && "getTextureAtlas with an invalid TextureAtlasHandle");
-	return m_textures[handle];
+	assert(handle.isValid());
+	uint16_t textureIdx = m_fontHandles.getHandleAt(handle.idx);
+	assert(textureIdx != bx::HandleAlloc::invalid);
+	
+	return m_atlas[textureIdx].textureHandle;
 }
+
+void FontManager::destroyTextureAtlas(TextureAtlasHandle handle)
+{
+	assert(handle.isValid());
+	uint16_t idx = m_filesHandles.getHandleAt(handle.idx);
+	assert(idx != bx::HandleAlloc::invalid);
+	
+	m_textureFactory->destroyTexture(idx);	
+	m_filesHandles.free(handle.idx);
+}
+
+bool FontManager::addBitmap(TextureAtlas& atlas, uint16_t width, uint16_t height, const uint8_t* data, uint16_t& x, uint16_t& y)
+{	
+	// We want each bitmap to be separated by at least one black pixel
+	if(!atlas.rectanglePacker.addRectangle(width + 1, height + 1,  x, y))
+	{
+		return false;
+	}
+
+	//but only update the bitmap region	(not the 1 pixel separator)
+	m_textureFactory->update(atlas.textureHandle, x, y, width, height, data);
+	return true;
+}
+
 
 TrueTypeHandle FontManager::loadTrueTypeFromFile(const char* fontPath, int32_t fontIndex)
 {
@@ -52,7 +98,7 @@ TrueTypeHandle FontManager::loadTrueTypeFromFile(const char* fontPath, int32_t f
 	pFile = fopen (fontPath, "rb");
 	if (pFile==NULL)
 	{
-		return INVALID_HANDLE;
+		return TrueTypeHandle(INVALID_HANDLE_ID);
 	}
 	
 	// Go to the end of the file.
@@ -63,73 +109,78 @@ TrueTypeHandle FontManager::loadTrueTypeFromFile(const char* fontPath, int32_t f
 		if (bufsize == -1) 
 		{
 			fclose(pFile);
-			return INVALID_HANDLE;
+			return TrueTypeHandle(INVALID_HANDLE_ID);
 		}
-			
-		CachedFile cachedFile;
-		cachedFile.buffer = new uint8_t[bufsize];
+		
+		uint8_t* buffer = new uint8_t[bufsize];
 
 		// Go back to the start of the file.
 		fseek(pFile, 0L, SEEK_SET);
 
 		// Read the entire file into memory.
-		size_t newLen = fread((void*)cachedFile.buffer, sizeof(char), bufsize, pFile);						
+		size_t newLen = fread((void*)buffer, sizeof(char), bufsize, pFile);						
 		if (newLen == 0) 
 		{
 			fclose(pFile);
-			delete [] cachedFile.buffer;
-			return INVALID_HANDLE;
+			delete [] buffer;
+			return TrueTypeHandle(INVALID_HANDLE_ID);
 		}
 		fclose(pFile);
 
-
-		cachedFile.trueType = new TrueTypeFont();	
-		if(cachedFile.trueType->init(cachedFile.buffer, bufsize, fontIndex))
-		{		
-			m_trueType.push_back(cachedFile);
-			return (TrueTypeHandle) (m_trueType.size()-1);
+		TrueTypeFont* trueType = new TrueTypeFont();	
+		if(trueType->init(buffer, bufsize, fontIndex))
+		{
+			uint16_t id = m_filesHandles.alloc();
+			assert(id != bx::HandleAlloc::invalid);
+			m_cachedFiles[id].buffer = buffer;
+			m_cachedFiles[id].trueType = trueType;
+			return TrueTypeHandle(id);
 		}
-		delete [] cachedFile.buffer;
-		delete cachedFile.trueType;	
-		return INVALID_HANDLE;
+		delete [] buffer;
+		delete trueType;	
+		return TrueTypeHandle(INVALID_HANDLE_ID);
 	}	
 
-	return INVALID_HANDLE;
+	return TrueTypeHandle(INVALID_HANDLE_ID);
 }
 
 TrueTypeHandle FontManager::loadTrueTypeFromMemory(const uint8_t* buffer, uint32_t size, int32_t fontIndex)
 {	
 	TrueTypeFont* ttf = new TrueTypeFont();	
 	if(ttf->init(buffer, size,fontIndex))
-	{	
+	{
+		uint16_t id = m_filesHandles.alloc();
+		assert(id != bx::HandleAlloc::invalid);
+		m_cachedFiles[id].buffer = NULL;
+		m_cachedFiles[id].trueType = ttf;
 
-		CachedFile cachedFile;
-		cachedFile.buffer = NULL;
-		cachedFile.trueType = ttf;
-		m_trueType.push_back(cachedFile);
-		return (TrueTypeHandle) (m_trueType.size()-1);
+		return TrueTypeHandle(id);		
 	}
-	delete ttf;
-	
-	return INVALID_HANDLE;
+	delete ttf;	
+	return TrueTypeHandle(INVALID_HANDLE_ID);
 }
 
 void FontManager::unLoadTrueType(TrueTypeHandle handle)
 {
-	assert(handle != INVALID_HANDLE);
-	assert(handle < (TrueTypeHandle)m_trueType.size());
-	delete m_trueType[handle].trueType;
-	delete m_trueType[handle].buffer;
-	m_trueType[handle].trueType = NULL;
-	m_trueType[handle].buffer = NULL;
+	assert(handle.isValid());
+	uint16_t idx = m_filesHandles.getHandleAt(handle.idx);
+	assert(idx != bx::HandleAlloc::invalid);
+	
+	delete m_cachedFiles[idx].trueType;
+	delete m_cachedFiles[idx].buffer;
+	m_cachedFiles[idx].trueType = NULL;
+	m_cachedFiles[idx].buffer = NULL;
+	m_filesHandles.free(handle.idx);
 }
 
-FontHandle FontManager::getFontByPixelSize(TrueTypeHandle handle, uint32_t pixelSize, FontType fontType)
+FontHandle FontManager::createFontByPixelSize(TrueTypeHandle handle, uint32_t pixelSize, FontType fontType)
 {
-	assert(handle != INVALID_HANDLE);
-	assert(handle < (TrueTypeHandle)m_trueType.size());
+	assert(handle.isValid());
+	uint16_t fileIdx = m_filesHandles.getHandleAt(handle.idx);
+	assert(fileIdx != bx::HandleAlloc::invalid);
 
 	//search first compatible texture
+	//TODO improve this
 	size_t texIdx = 0;
 	for(; texIdx < m_textureCount; ++texIdx)
 	{
@@ -146,37 +197,32 @@ FontHandle FontManager::getFontByPixelSize(TrueTypeHandle handle, uint32_t pixel
 
 	if(texIdx == m_textureCount)
 	{ 
-		return false;
+		return FontHandle(INVALID_HANDLE_ID);
 	}
 
-	CachedFont* fnt = new CachedFont;
-	fnt->trueTypeFont = m_trueType[handle].trueType;
-	fnt->fontInfo = fnt->trueTypeFont->getFontInfoByPixelSize((float) pixelSize);
-	fnt->fontInfo.fontType = fontType;
-
+	uint16_t fontIdx = m_filesHandles.alloc();
+	assert(fontIdx != bx::HandleAlloc::invalid);
 	
-
-	fnt->fontInfo.textureIndex = texIdx;
-
-	m_cachedFonts.push_back(fnt);
-	return 	m_cachedFonts.size()-1;
-}
-	
-FontHandle FontManager::getFontByEmSize(TrueTypeHandle handle, uint32_t emSize, FontType fontType)
-{
-	assert(handle != INVALID_HANDLE);
-	assert(handle < (TrueTypeHandle)m_trueType.size());
-
-	CachedFont* fnt = new CachedFont;
-	fnt->trueTypeFont = m_trueType[handle].trueType;
-	fnt->fontInfo = fnt->trueTypeFont->getFontInfoByPixelSize((float) emSize);
-	fnt->fontInfo.fontType = fontType;
-
-	//search first compatible texture
-	size_t texIdx = 0;
-	for(; texIdx < m_textureCount; ++texIdx)
-	{
+	m_cachedFonts[fontIdx].trueTypeFont = m_cachedFiles[fileIdx].trueType;
+	m_cachedFonts[fontIdx].fontInfo = m_cachedFonts[fontIdx].trueTypeFont->getFontInfoByPixelSize((float) pixelSize);
+	m_cachedFonts[fontIdx].fontInfo.fontType = fontType;
+	m_cachedFonts[fontIdx].fontInfo.textureIndex = texIdx;
+	m_cachedFonts[fontIdx].cachedGlyphs.clear();
 		
+	return FontHandle(fontIdx);
+}
+	
+FontHandle FontManager::createFontByEmSize(TrueTypeHandle handle, uint32_t emSize, FontType fontType)
+{
+	assert(handle.isValid());
+	uint16_t fileIdx = m_filesHandles.getHandleAt(handle.idx);
+	assert(fileIdx != bx::HandleAlloc::invalid);
+
+	//search first compatible texture
+	//TODO improve this
+	size_t texIdx = 0;
+	for(; texIdx < m_textureCount; ++texIdx)
+	{
 		TextureType texType = m_textures[texIdx]->getTextureType();
 		if(texType == TEXTURE_TYPE_ALPHA && (fontType == FONT_TYPE_ALPHA || fontType == FONT_TYPE_DISTANCE))
 		{
@@ -190,24 +236,52 @@ FontHandle FontManager::getFontByEmSize(TrueTypeHandle handle, uint32_t emSize, 
 
 	if(texIdx == m_textureCount)
 	{ 
-		return false;
+		return FontHandle(INVALID_HANDLE_ID);
 	}
 
-	fnt->fontInfo.textureIndex = texIdx;
-	m_cachedFonts.push_back(fnt);
-	return 	m_cachedFonts.size()-1;
+	uint16_t fontIdx = m_filesHandles.alloc();
+	assert(fontIdx != bx::HandleAlloc::invalid);
+	assert(m_cachedFonts[fontIdx].cachedGlyphs.empty());
+
+	m_cachedFonts[fontIdx].trueTypeFont = m_cachedFiles[fileIdx].trueType;
+	m_cachedFonts[fontIdx].fontInfo = m_cachedFonts[fontIdx].trueTypeFont->getFontInfoByEmSize((float) emSize);
+	m_cachedFonts[fontIdx].fontInfo.fontType = fontType;
+	m_cachedFonts[fontIdx].fontInfo.textureIndex = texIdx;
+			
+	return FontHandle(fontIdx);	
+}
+
+FontHandle FontManager::loadBakedFontFromFile(const char* fontPath,  const char* descriptorPath)
+{
+	assert(false); //TODO implement
+	return FontHandle(INVALID_HANDLE_ID);
+}
+
+FontHandle FontManager::loadBakedFontFromMemory(const uint8_t* imageBuffer, uint32_t imageSize, const uint8_t* descriptorBuffer, uint32_t descriptorSize)
+{
+	assert(false); //TODO implement
+	return FontHandle(INVALID_HANDLE_ID);
+}
+
+void FontManager::destroyFont(FontHandle _handle)
+{
+	assert(_handle.isValid());
+	uint16_t fontIdx = m_fontHandles.getHandleAt(_handle.idx);
+	assert(fontIdx != bx::HandleAlloc::invalid);
+
+	m_cachedFonts[fontIdx].cachedGlyphs.clear();	
+	m_fontHandles.free(_handle.idx);
 }
 
 bool FontManager::preloadGlyph(FontHandle handle, const wchar_t* _string)
 {
-	assert(handle != INVALID_HANDLE);
-	assert(handle < (int32_t)m_cachedFonts.size());
-	assert(m_cachedFonts[handle] != NULL);	
+	assert(handle.isValid());
+	uint16_t fontIdx = m_fontHandles.getHandleAt(handle.idx);
+	assert(fontIdx != bx::HandleAlloc::invalid);
 
-	CachedFont& font = *m_cachedFonts[handle];
+	CachedFont& font = m_cachedFonts[fontIdx];
 	FontInfo& fontInfo = font.fontInfo;
-	TextureAtlas* textureAtlas = m_textures[fontInfo.textureIndex];
-	
+	TextureAtlas* textureAtlas = m_textures[fontInfo.textureIndex];	
 
 	//if truetype present
 	if(font.trueTypeFont != NULL)
@@ -260,22 +334,14 @@ bool FontManager::preloadGlyph(FontHandle handle, const wchar_t* _string)
 	return false;
 }
 
-FontHandle FontManager::loadBakedFontFromFile(const char* fontPath,  const char* descriptorPath)
-{
-	assert(false); //TODO implement
-	return INVALID_HANDLE;
-}
-
-FontHandle FontManager::loadBakedFontFromMemory(const uint8_t* imageBuffer, uint32_t imageSize, const uint8_t* descriptorBuffer, uint32_t descriptorSize)
-{
-	assert(false); //TODO implement
-	return INVALID_HANDLE;
-}
 
 const FontInfo& FontManager::getFontInfo(FontHandle handle)
 { 
-	assert(handle != INVALID_HANDLE);
-	return m_cachedFonts[handle]->fontInfo; 
+	assert(handle.isValid());
+	uint16_t fontIdx = m_fontHandles.getHandleAt(handle.idx);
+	assert(fontIdx != bx::HandleAlloc::invalid);
+	
+	return m_cachedFonts[fontIdx].fontInfo;
 }
 bool FontManager::getGlyphInfo(FontHandle fontHandle, uint32_t codePoint, GlyphInfo& outInfo)
 {
