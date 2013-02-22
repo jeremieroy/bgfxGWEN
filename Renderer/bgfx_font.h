@@ -7,7 +7,7 @@ namespace bgfx_font
 	/// initialize bgfx_text library
 	/// Create font rendering shader program, and vertex format.
 	/// @remark assume bgfx is initialized
-	void init();
+	void init(const char* shaderPath);
 	
 	/// shutdown bgfx_text library
 	/// @remark assume bgfx is (still) initialized

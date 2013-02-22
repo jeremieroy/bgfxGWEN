@@ -174,13 +174,13 @@ void unloadTrueTypeFont(TrueTypeHandle _handle)
 FontHandle getFontByPixelSize(TrueTypeHandle _handle, uint32_t _pixelSize, FontType _fontType)
 {
 	assert(g_context != NULL && "Context not initialized. Call bgfx_text::init(); ");
-	return (FontHandle) g_context->fontManager.createFontByPixelSize(_handle, (float) _pixelSize, _fontType);
+	return (FontHandle) g_context->fontManager.createFontByPixelSize(_handle, _pixelSize, _fontType);
 }
 	
 FontHandle getFontByEmSize(TrueTypeHandle _handle, uint32_t _emSize, FontType _fontType)
 {
 	assert(g_context != NULL && "Context not initialized. Call bgfx_text::init(); ");
-	return (FontHandle) g_context->fontManager.createFontByEmSize(_handle, (float) _emSize, _fontType);
+	return (FontHandle) g_context->fontManager.createFontByEmSize(_handle, _emSize, _fontType);
 }
 
 FontHandle loadBakedFont(const char * _fontPath, const char * _fontName)

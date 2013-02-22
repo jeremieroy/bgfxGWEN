@@ -15,8 +15,9 @@
 #include <common/math.h>
 #include <common/processevents.h>
 
-#include "TrueTypeFont.h"
-#include "FontManager.h"
+#include "bgfx_font.h"
+//#include "TrueTypeFont.h"
+//#include "FontManager.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -104,8 +105,11 @@ int _main_(int _argc, char** _argv)
     uint32_t width = 1280;
 	uint32_t height = 720;
 	uint32_t debug = BGFX_DEBUG_TEXT;
+	uint32_t reset = 0;
 
 	bgfx::init();
+	
+
 	bgfx::reset(width, height);
 
 	// Enable debug text.
@@ -141,7 +145,7 @@ int _main_(int _argc, char** _argv)
 		s_shaderPath = "shaders/gles/";
 		break;
 	}
-
+	bgfx_font::init(s_shaderPath);
 
    
     Gwen::Renderer::bgfxRenderer * pRenderer = new Gwen::Renderer::bgfxRenderer(0,s_shaderPath, "textures/");
@@ -181,26 +185,27 @@ int _main_(int _argc, char** _argv)
 	//bgfx_font::TrueTypeFont* font = new  bgfx_font::TrueTypeFont();
     //font->loadFont("c:/windows/fonts/times.ttf");
 
-    TextureProvider_bgfx* text_provider = new TextureProvider_bgfx(512, 512, 1);
-	bgfx_font::TextureAtlas* atlas = new bgfx_font::TextureAtlas(text_provider);
-	bgfx_font::FontManager stash;
-	stash.addTextureAtlas(atlas);
-	
-	bgfx_font::TrueTypeHandle times_tt = stash.loadTrueTypeFromFile("c:/windows/fonts/times.ttf");
-	bgfx_font::TrueTypeHandle comic_tt = stash.loadTrueTypeFromFile("c:/windows/fonts/comic.ttf");
-	bgfx_font::TrueTypeHandle calibri_tt = stash.loadTrueTypeFromFile("c:/windows/fonts/calibri.ttf");
+	bgfx_font::TextureAtlasHandle atlas = bgfx_font::createTextureAtlas(bgfx_font::TEXTURE_TYPE_ALPHA, 512,512);
+ 	
+	bgfx_font::TrueTypeHandle times_tt = bgfx_font::loadTrueTypeFont("c:/windows/fonts/times.ttf");
+	bgfx_font::TrueTypeHandle comic_tt = bgfx_font::loadTrueTypeFont("c:/windows/fonts/comic.ttf");
+	bgfx_font::TrueTypeHandle calibri_tt = bgfx_font::loadTrueTypeFont("c:/windows/fonts/calibri.ttf");
 
 	for(int i = 16; i < 30; i+=2)
 	{		
-		bgfx_font::FontHandle font = stash.getFontByPixelSize(times_tt, i);
-		stash.preloadGlyph(font, L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");
+		bgfx_font::FontHandle font = bgfx_font::getFontByPixelSize(times_tt, i);
+		bgfx_font::preloadGlyph(font, L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");
 		
-		bgfx_font::FontHandle font2 = stash.getFontByPixelSize(comic_tt, i);
-		stash.preloadGlyph(font2, L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");	
+		bgfx_font::FontHandle font2 = bgfx_font::getFontByPixelSize(comic_tt, i);
+		bgfx_font::preloadGlyph(font2, L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");	
 
-		bgfx_font::FontHandle font3 = stash.getFontByPixelSize(calibri_tt, i);
-		stash.preloadGlyph(font3, L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");	
+		bgfx_font::FontHandle font3 = bgfx_font::getFontByPixelSize(calibri_tt, i);
+		bgfx_font::preloadGlyph(font3, L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");	
 	}
+
+	bgfx_font::unloadTrueTypeFont(times_tt);
+	bgfx_font::unloadTrueTypeFont(comic_tt);
+	bgfx_font::unloadTrueTypeFont(calibri_tt);
 	
 	std::vector<uint8_t> buffer;
 	float emSize = 18.0f;
@@ -263,7 +268,7 @@ int _main_(int _argc, char** _argv)
 
     //void bakeGlyphAlpha(uint32_t codePoint, float size, uint8_t* outBuffer);
 
-    while (!processEvents(width, height, debug) )
+    while (!processEvents(width, height, debug, reset) )
 	{
 		// Set view 0 default viewport.
 		bgfx::setViewRect(0, 0, 0, width, height);
@@ -299,7 +304,7 @@ int _main_(int _argc, char** _argv)
 		bgfx::setVertexBuffer(vbh);
 		bgfx::setIndexBuffer(ibh);
 
-		bgfx::setTexture(0, u_texColor, text_provider->m_handle);
+		bgfx::setTexture(0, u_texColor, bgfx_font::getTextureHandle(atlas));
 
 		bgfx::setState( BGFX_STATE_RGB_WRITE
 				|BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_SRC_ALPHA, BGFX_STATE_BLEND_INV_SRC_ALPHA)
@@ -325,11 +330,9 @@ int _main_(int _argc, char** _argv)
 	bgfx::destroyUniform(u_texColor);
 	//bgfx::destroyUniform(u_color0);
 
-	//delete font;
-    delete text_provider;
-	
 	bgfx::destroyProgram(program);
 
+	bgfx_font::shutdown();
 	// Shutdown bgfx.
     bgfx::shutdown();
 
