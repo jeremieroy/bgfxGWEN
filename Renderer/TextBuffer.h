@@ -5,21 +5,6 @@
 namespace bgfx_font
 {
 
-namespace TextStyleFlags
-{
-	enum
-	{
-		NORMAL           = 0,
-		OVERLINE         = 1,
-		UNDERLINE        = 1<<1,
-		STRIKE_THROUGH   = 1<<2,
-		COLOR_BACKGROUND = 1<<3,
-
-		//STRIKE_THROUGH = 1<<2,
-	};
-};
-
-
 struct TextVertex
 {
 	void set(int16_t _x, int16_t _y, uint16_t _u, uint16_t _v, uint32_t _rgba)
@@ -42,7 +27,7 @@ public:
 	TextBuffer(FontManager* fontManager);
 	~TextBuffer();
 
-	void setStyle(uint32_t flags = TextStyleFlags::NORMAL);
+	void setStyle(uint32_t flags = STYLE_NORMAL);
 	void setTextColor(uint32_t rgba = 0x000000FF);
 	void setBackgroundColor(uint32_t rgba = 0x000000FF);
 

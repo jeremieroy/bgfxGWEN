@@ -1,61 +1,28 @@
 #pragma once
 #include <bgfx.h> 
+#include "bgfx_font_types.h"
 
-namespace bgfx_text
+namespace bgfx_font
 {
-	struct TrueTypeHandle { uint16_t idx; };
-	struct FontHandle { uint16_t idx; };
-	struct TextBufferHandle{ uint16_t idx; };
-	//const uint16_t INVALID_HANDLE = { UINT16_MAX };
-	
-	/// Type of rendering used for the font (determine texture format and shader type)
-	enum FontType
-	{
-		FONT_TYPE_ALPHA    = 0, // L8
-		FONT_TYPE_HINTED   = 1, // BGRA8
-		FONT_TYPE_RGBA     = 2, // BGRA8
-		FONT_TYPE_DISTANCE = 3  // L8
-	};
-
-	/// Type of texture supported for text
-	enum TextureType
-	{
-		TEXTURE_TYPE_ALPHA = 0, // L8
-		TEXTURE_TYPE_RGBA = 1   // BGRA8
-	};
-
-	/// type of vertex and index buffer to use with a TextBuffer
-	enum BufferType
-	{
-		STATIC,
-		DYNAMIQUE ,
-		TRANSIENT
-	};
-
-	/// special style effect (can be combined)
-	enum TextStyle
-	{
-		STYLE_NORMAL           = 0,
-		STYLE_OVERLINE         = 1,
-		STYLE_UNDERLINE        = 1<<1,
-		STYLE_STRIKE_THROUGH   = 1<<2,
-		STYLE_BACKGROUND       = 1<<3,
-	};
-
-	///  initialize bgfx_text library
-	///  Create font rendering shader program, and vertex format.
-	///  @remark assume bgfx is initialized
+	/// initialize bgfx_text library
+	/// Create font rendering shader program, and vertex format.
+	/// @remark assume bgfx is initialized
 	void init();
 	
-	///  shutdown bgfx_text library
-	///  @remark assume bgfx is (still) initialized
+	/// shutdown bgfx_text library
+	/// @remark assume bgfx is (still) initialized
 	void shutdown();
 
-	///  allocate a texture of the given type and size
-	bgfx::TextureHandle createTexture(TextureType _textureType, uint16_t _width, uint16_t _height);
+	/// allocate a texture atlas of the given type and size	
+	TextureAtlasHandle createTextureAtlas(TextureType _type, uint16_t _width, uint16_t _height);
+
+	/// retrieve a texture resource using the atlas handle
+	/// The bgfx texture belong to the atlas, do not destroy it ! 
+	/// Instead you must destroy the TextureAtlas when it's not needed anymore.
+	bgfx::TextureHandle getTextureHandle(TextureAtlasHandle _handle);
 	
-	///  destroy a texture
-	void destroyTexture(bgfx::TextureHandle _handle);
+	/// destroy a texture atlas an the associated bgfx texture
+	void destroyTextureAtlas(TextureAtlasHandle _handle);
 		
 	/// Load a truetype ressource from a file, glyph can generated if the font is loaded
 	TrueTypeHandle loadTrueTypeFont(const char * _fontPath);

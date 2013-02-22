@@ -14,7 +14,7 @@ TextBuffer::TextBuffer(FontManager* fontManager) : m_fontManager(fontManager)
 	assert(m_vertexBuffer != NULL);
 	assert(m_indexBuffer != NULL);
 
-	m_styleFlags = TextStyleFlags::NORMAL;
+	m_styleFlags = STYLE_NORMAL;
 
 	m_textColor = 0x000000FF;
 	m_backgroundColor = 0xFFFFFFFF;

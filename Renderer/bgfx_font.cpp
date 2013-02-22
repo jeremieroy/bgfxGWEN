@@ -4,66 +4,57 @@
 #include <bx/macros.h>
 #include <unordered_map>
 
-namespace bgfx_text
+namespace bgfx_font
 {
 
 //engine abstraction
-class TextureProvider_bgfx : public bgfx_font::ITextureProvider
+class TextureFactory_bgfx : public ITextureFactory
 {
 public:
-    TextureProvider_bgfx(uint16_t width, uint16_t height, bgfx_font::TextureType type, uint32_t depth): m_width(width), m_height(height), m_type(type), m_depth(depth)
-    {
-		const bgfx::Memory* mem = NULL;		
+	uint16_t createTexture(TextureType textureType, uint16_t width, uint16_t height)
+	{
+		//should I allocate memory here ?
+		const bgfx::Memory* mem = NULL;
 		uint32_t flags = BGFX_TEXTURE_MIN_POINT|BGFX_TEXTURE_MAG_POINT|BGFX_TEXTURE_U_CLAMP|BGFX_TEXTURE_V_CLAMP;
 		//uint32_t flags = BGFX_TEXTURE_NONE;
-		if(depth==1)
-			m_handle = bgfx::createTexture2D(width, height, 1, bgfx::TextureFormat::L8, flags, mem);
-		else
-			m_handle = bgfx::createTexture2D(width, height, 1, bgfx::TextureFormat::BGRA8, flags, mem);		
-    }
 
-	~TextureProvider_bgfx()
-	{
-		bgfx::destroyTexture(m_handle);
+		bgfx::TextureHandle handle;
+		switch(textureType)
+		{
+			case TEXTURE_TYPE_ALPHA:
+				handle = bgfx::createTexture2D(width, height, 1, bgfx::TextureFormat::L8, flags, mem);
+			break;
+			case TEXTURE_TYPE_RGBA:
+				handle = bgfx::createTexture2D(width, height, 1, bgfx::TextureFormat::BGRA8, flags, mem);
+			break;
+		};
+		return handle.idx;
 	}
 
-    uint16_t getWidth() { return m_width; }
-    uint16_t getHeight() { return m_height; }
-    uint32_t getDepth() { return m_depth; }
-	bgfx_font::TextureType getTextureType() { return m_type; }
+	void destroyTexture(uint16_t textureHandle)
+	{
+		bgfx::TextureHandle handle;
+		handle.idx = textureHandle;
+		bgfx::destroyTexture(handle);
+	}
 
-	void update(uint16_t x, uint16_t y, uint16_t width, uint16_t height, const uint8_t* data)
-    {	
-		const bgfx::Memory* mem = bgfx::alloc(width*height*m_depth);
-		memcpy(mem->data, data, width*height*m_depth);
-		bgfx::updateTexture2D(m_handle, 0, x, y, width, height, mem);
-    }    
-    uint16_t m_width;
-    uint16_t m_height;
-    uint32_t m_depth;
-	bgfx_font::TextureType m_type;
-    bgfx::TextureHandle m_handle;
+	void update(uint16_t textureHandle, uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint16_t depth, const uint8_t* data)
+	{		
+		//this allocation could maybe be avoided, will see later
+		const bgfx::Memory* mem = bgfx::alloc(width*height*depth);
+		memcpy(mem->data, data, width*height*depth);
+		bgfx::TextureHandle handle;
+		handle.idx = textureHandle;
+		bgfx::updateTexture2D(handle, 0, x, y, width, height, mem);
+	}
 };
 
-struct TextureCache
-{
-	TextureProvider_bgfx* textureProvider;
-	bgfx_font::TextureAtlas* atlas;
-};
-
-struct BufferCache
-{
-
-};
-
-typedef std::unordered_map<uint16_t, TextureCache> TextureMap_t ;
-
-typedef std::unordered_map<uint16_t, BufferCache> BufferMap_t;
+//typedef std::unordered_map<uint16_t, TextureCache> TextureMap_t ;
+//typedef std::unordered_map<uint16_t, BufferCache> BufferMap_t;
 
 struct Context
 {
-	Context(){}
-	
+	Context(ITextureFactory* textureFactory):fontManager(textureFactory){}	
 	bgfx_font::FontManager fontManager;
 	//shaders program
 	bgfx::ProgramHandle basicProgram;	
@@ -71,13 +62,14 @@ struct Context
 	//vertex & index Buffers
 	bgfx::VertexDecl vertexDecl;
 
-	TextureMap_t textureProviders;
+	//TextureMap_t textureProviders;
 
-	uint32_t bufferUID;
-	BufferMap_t bufferProviders;
+	//uint32_t bufferUID;
+	//BufferMap_t bufferProviders;
 
 };
-	
+
+static TextureFactory_bgfx* g_textureFactory = NULL;
 static Context* g_context = NULL;
 
 long int fsize(FILE* _file)
@@ -115,7 +107,8 @@ static const bgfx::Memory* loadShader(const char* _shaderPath, const char* _shad
 void init(const char* shaderPath)
 {
 	assert(g_context == NULL && "A context can only be initialized once");
-	g_context = new Context();
+	g_textureFactory = new TextureFactory_bgfx;
+	g_context = new Context(g_textureFactory);
 
 	const bgfx::Memory* mem;
 	mem = loadShader(shaderPath, "vs_font_basic");
@@ -130,43 +123,34 @@ void init(const char* shaderPath)
 		
 void shutdown()
 {
-	assert(g_context != NULL && "Context not initialized");
-	assert(g_context->textureProviders.empty() && "A texture isn't properly destroyed.");
-
+	assert(g_context != NULL && "Context not initialized");	
 	bgfx::destroyProgram(g_context->basicProgram);
 	delete g_context;
 	g_context = NULL;
+
+	delete g_textureFactory;
+	g_textureFactory = NULL;
 }
 
-bgfx::TextureHandle createTexture(TextureType _textureType, uint16_t _width, uint16_t _height)
+TextureAtlasHandle createTextureAtlas(TextureType _type, uint16_t _width, uint16_t _height)
 {
 	assert(g_context != NULL && "Context not initialized. Call bgfx_text::init(); ");
-	g_context = new Context();
-
-	TextureCache cache;
-	cache.textureProvider = new TextureProvider_bgfx(512, 512, (bgfx_font::TextureType) _textureType, 1);
-	cache.atlas = new bgfx_font::TextureAtlas(cache.textureProvider);
-
-	bgfx_font::TextureAtlasHandle atlasHandle = g_context->fontManager.addTextureAtlas(cache.atlas);
-		
-	g_context->textureProviders[cache.textureProvider->m_handle.idx] = cache;
-	return cache.textureProvider->m_handle;
+	return g_context->fontManager.createTextureAtlas(_type, _width, _height);
 }
 
-void destroyTexture(bgfx::TextureHandle _handle)
+bgfx::TextureHandle getTextureHandle(TextureAtlasHandle _handle)
 {
-	assert( g_context != NULL && "Context not initialized. Call bgfx_text::init(); ");
-	assert( (_handle.idx != -1) && "Invalid texture handle");
-
-	
-	TextureMap_t::iterator iter = g_context->textureProviders.find(_handle.idx);
-	assert( (iter != g_context->textureProviders.end()) && "Invalid texture handle");
-
-	delete (*iter).second.atlas;
-	delete (*iter).second.textureProvider;
-	g_context->textureProviders.erase(iter);	
+	assert(g_context != NULL && "Context not initialized. Call bgfx_text::init(); ");
+	bgfx::TextureHandle handle;
+	handle.idx = g_context->fontManager.getTextureHandle(_handle);
+	return handle;
 }
-		
+
+void destroyTextureAtlas(TextureAtlasHandle _handle)
+{
+	assert(g_context != NULL && "Context not initialized. Call bgfx_text::init(); ");
+	g_context->fontManager.destroyTextureAtlas(_handle);
+}
 
 TrueTypeHandle loadTrueTypeFont(const char * _fontPath)
 {
@@ -178,7 +162,7 @@ TrueTypeHandle loadTrueTypeFont(const bgfx::Memory* _mem)
 {
 	assert(g_context != NULL && "Context not initialized. Call bgfx_text::init(); ");
 	assert(false && "Not implemented yet");
-	return BGFX_INVALID_HANDLE;
+	return TrueTypeHandle(INVALID_HANDLE_ID);
 }
 
 void unloadTrueTypeFont(TrueTypeHandle _handle)
@@ -190,26 +174,26 @@ void unloadTrueTypeFont(TrueTypeHandle _handle)
 FontHandle getFontByPixelSize(TrueTypeHandle _handle, uint32_t _pixelSize, FontType _fontType)
 {
 	assert(g_context != NULL && "Context not initialized. Call bgfx_text::init(); ");
-	return (FontHandle) g_context->fontManager.getFontByPixelSize(_handle, (float) _pixelSize, _fontType);
+	return (FontHandle) g_context->fontManager.createFontByPixelSize(_handle, (float) _pixelSize, _fontType);
 }
 	
 FontHandle getFontByEmSize(TrueTypeHandle _handle, uint32_t _emSize, FontType _fontType)
 {
 	assert(g_context != NULL && "Context not initialized. Call bgfx_text::init(); ");
-	return (FontHandle) g_context->fontManager.getFontByEmSize(_handle, (float) _emSize, _fontType);
+	return (FontHandle) g_context->fontManager.createFontByEmSize(_handle, (float) _emSize, _fontType);
 }
 
 FontHandle loadBakedFont(const char * _fontPath, const char * _fontName)
 {
 	assert(g_context != NULL && "Context not initialized. Call bgfx_text::init(); ");
 	assert(false && "Not implemented yet");
-	return BGFX_INVALID_HANDLE;
+	return FontHandle(INVALID_HANDLE_ID);
 }
 
 bool preloadGlyph(FontHandle _handle, const wchar_t* _string)
 {
 	assert(g_context != NULL && "Context not initialized. Call bgfx_text::init(); ");
-	 g_context->fontManager.preloadGlyph(_handle, _string);
+	return g_context->fontManager.preloadGlyph(_handle, _string);
 }
 
 void bakeAndSaveFont(FontHandle _handle, const char * _fontPath, const char * _fontName)
@@ -221,6 +205,7 @@ void bakeAndSaveFont(FontHandle _handle, const char * _fontPath, const char * _f
 TextBufferHandle createTextBuffer(FontType _type, BufferType bufferType, uint32_t _maxCharacterCount)
 {
 	assert(g_context != NULL && "Context not initialized. Call bgfx_text::init(); ");
+	return TextBufferHandle(INVALID_HANDLE_ID);
 }
 
 void destroyTextBuffer(TextBufferHandle _handle)

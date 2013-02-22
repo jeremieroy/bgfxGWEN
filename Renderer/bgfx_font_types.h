@@ -106,6 +106,10 @@ namespace bgfx_font
 	/// TODO handle kerning
 	struct GlyphInfo
 	{	
+		/*GlyphInfo(const GlyphInfo& rhs)
+		{
+			glyphIndex = rhs.glyphIndex;
+		}*/
 		/// Index for faster retrieval
 		int32_t glyphIndex;
 	

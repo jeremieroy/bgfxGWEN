@@ -49,9 +49,9 @@ namespace bgfx_font
 class ITextureFactory
 {
 public:
-	virtual uint16_t createTexture(uint16_t width, uint16_t height, TextureType textureType) = 0;
+	virtual uint16_t createTexture(TextureType textureType, uint16_t width, uint16_t height) = 0;
 	virtual void destroyTexture(uint16_t textureHandle) = 0;
-    virtual void update(uint16_t textureHandle, uint16_t x, uint16_t y, uint16_t width, uint16_t height, const uint8_t* data) = 0;
+    virtual void update(uint16_t textureHandle, uint16_t x, uint16_t y, uint16_t width, uint16_t height,uint16_t depth, const uint8_t* data) = 0;
 };
 
 class FontManager
@@ -60,13 +60,12 @@ public:
 	FontManager(ITextureFactory* textureFactory, uint32_t maxGlyphBitmapSize = 64);
 	~FontManager();
 
-	/// Add a texture atlas ressource to the font manager
-	/// Up to 4 atlas can be added
+	/// Add a texture atlas resource to the font manager
 	/// The texture will be used as a texture atlas for storing glyph data
 	/// The ownership of the texture provider stays external
-	TextureAtlasHandle createTextureAtlas(uint16_t width, uint16_t height, TextureType type );
+	TextureAtlasHandle createTextureAtlas(TextureType type, uint16_t width, uint16_t height);
 	
-	/// retrieve a texture ressource using the atlas handle
+	/// retrieve a texture resource using the atlas handle
 	uint16_t getTextureHandle(TextureAtlasHandle handle);
 
 	/// destroy a texture atlas
@@ -117,17 +116,16 @@ public:
 	/// Return the rendering informations about the glyph region
 	/// Load the glyph from a TrueType font if possible
 	/// @return true if the Glyph is available
-	bool getGlyphInfo(FontHandle fontHandle, uint32_t codePoint, GlyphInfo& outInfo);
+	bool getGlyphInfo(FontHandle fontHandle, CodePoint_t codePoint, GlyphInfo& outInfo);
 private:
 	
-	typedef stl::unordered_map<uint32_t, GlyphInfo> GlyphHash_t;	
+	typedef stl::unordered_map<CodePoint_t, GlyphInfo> GlyphHash_t;	
 	// cache font data
 	struct CachedFont
 	{
 		FontInfo fontInfo;
 		GlyphHash_t cachedGlyphs;
 		TrueTypeFont* trueTypeFont;
-		//uint8_t* fileBuffer;
 	};
 	bx::HandleAlloc m_fontHandles;
 	CachedFont* m_cachedFonts;

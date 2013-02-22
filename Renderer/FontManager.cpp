@@ -35,9 +35,9 @@ FontManager::~FontManager()
 	m_buffer = NULL;
 }
 
-TextureAtlasHandle FontManager::createTextureAtlas(uint16_t width, uint16_t height, TextureType type)
+TextureAtlasHandle FontManager::createTextureAtlas(TextureType type, uint16_t width, uint16_t height)
 {
-	uint16_t textureHandle = m_textureFactory->createTexture(width, height, type);
+	uint16_t textureHandle = m_textureFactory->createTexture(type, width, height);
 	assert(textureHandle != INT16_MAX);
 
 	assert(width >= 16 );
@@ -52,10 +52,9 @@ TextureAtlasHandle FontManager::createTextureAtlas(uint16_t width, uint16_t heig
 	// Create filler rectangle
 	uint8_t buffer[4*4*4];
 	memset( buffer, 255, 4 * 4 * 4);
-	m_textureFactory->update(textureHandle, 1,1,width, height, buffer);
-	uint16_t x,y;
-	m_atlas[atlasIdx].rectanglePacker.addRectangle(4 + 1, 4 + 1,  x,y);
 	
+	uint16_t x,y;
+	assert( addBitmap(m_atlas[atlasIdx], 4, 4, buffer, x, y ) );
 	return TextureAtlasHandle(atlasIdx);
 }
 
@@ -87,7 +86,7 @@ bool FontManager::addBitmap(TextureAtlas& atlas, uint16_t width, uint16_t height
 	}
 
 	//but only update the bitmap region	(not the 1 pixel separator)
-	m_textureFactory->update(atlas.textureHandle, x, y, width, height, data);
+	m_textureFactory->update(atlas.textureHandle, x, y, width, height,atlas.depth, data);
 	return true;
 }
 
@@ -181,10 +180,12 @@ FontHandle FontManager::createFontByPixelSize(TrueTypeHandle handle, uint32_t pi
 
 	//search first compatible texture
 	//TODO improve this
-	size_t texIdx = 0;
-	for(; texIdx < m_textureCount; ++texIdx)
-	{
-		TextureType texType = m_textures[texIdx]->getTextureType();
+	uint16_t texCount = m_atlasHandles.getNumHandles();
+	const uint16_t* texHandles = m_atlasHandles.getHandles();
+	uint16_t texIdx = 0;
+	for(; texIdx < texCount; ++texIdx)
+	{		
+		TextureType texType = m_atlas[ texHandles[texIdx] ].type;
 		if(texType == TEXTURE_TYPE_ALPHA && (fontType == FONT_TYPE_ALPHA || fontType == FONT_TYPE_DISTANCE))
 		{
 			break;
@@ -195,7 +196,7 @@ FontHandle FontManager::createFontByPixelSize(TrueTypeHandle handle, uint32_t pi
 		}
 	}
 
-	if(texIdx == m_textureCount)
+	if(texIdx == texCount)
 	{ 
 		return FontHandle(INVALID_HANDLE_ID);
 	}
@@ -206,7 +207,7 @@ FontHandle FontManager::createFontByPixelSize(TrueTypeHandle handle, uint32_t pi
 	m_cachedFonts[fontIdx].trueTypeFont = m_cachedFiles[fileIdx].trueType;
 	m_cachedFonts[fontIdx].fontInfo = m_cachedFonts[fontIdx].trueTypeFont->getFontInfoByPixelSize((float) pixelSize);
 	m_cachedFonts[fontIdx].fontInfo.fontType = fontType;
-	m_cachedFonts[fontIdx].fontInfo.textureIndex = texIdx;
+	m_cachedFonts[fontIdx].fontInfo.textureAtlas = TextureAtlasHandle(texHandles[texIdx]);
 	m_cachedFonts[fontIdx].cachedGlyphs.clear();
 		
 	return FontHandle(fontIdx);
@@ -220,10 +221,12 @@ FontHandle FontManager::createFontByEmSize(TrueTypeHandle handle, uint32_t emSiz
 
 	//search first compatible texture
 	//TODO improve this
-	size_t texIdx = 0;
-	for(; texIdx < m_textureCount; ++texIdx)
-	{
-		TextureType texType = m_textures[texIdx]->getTextureType();
+	uint16_t texCount = m_atlasHandles.getNumHandles();
+	const uint16_t* texHandles = m_atlasHandles.getHandles();
+	uint16_t texIdx = 0;
+	for(; texIdx < texCount; ++texIdx)
+	{		
+		TextureType texType = m_atlas[ texHandles[texIdx] ].type;
 		if(texType == TEXTURE_TYPE_ALPHA && (fontType == FONT_TYPE_ALPHA || fontType == FONT_TYPE_DISTANCE))
 		{
 			break;
@@ -234,19 +237,19 @@ FontHandle FontManager::createFontByEmSize(TrueTypeHandle handle, uint32_t emSiz
 		}
 	}
 
-	if(texIdx == m_textureCount)
+	if(texIdx == texCount)
 	{ 
 		return FontHandle(INVALID_HANDLE_ID);
 	}
 
 	uint16_t fontIdx = m_filesHandles.alloc();
 	assert(fontIdx != bx::HandleAlloc::invalid);
-	assert(m_cachedFonts[fontIdx].cachedGlyphs.empty());
 
 	m_cachedFonts[fontIdx].trueTypeFont = m_cachedFiles[fileIdx].trueType;
 	m_cachedFonts[fontIdx].fontInfo = m_cachedFonts[fontIdx].trueTypeFont->getFontInfoByEmSize((float) emSize);
 	m_cachedFonts[fontIdx].fontInfo.fontType = fontType;
-	m_cachedFonts[fontIdx].fontInfo.textureIndex = texIdx;
+	m_cachedFonts[fontIdx].fontInfo.textureAtlas = TextureAtlasHandle(texHandles[texIdx]);
+	m_cachedFonts[fontIdx].cachedGlyphs.clear();
 			
 	return FontHandle(fontIdx);	
 }
@@ -281,7 +284,7 @@ bool FontManager::preloadGlyph(FontHandle handle, const wchar_t* _string)
 
 	CachedFont& font = m_cachedFonts[fontIdx];
 	FontInfo& fontInfo = font.fontInfo;
-	TextureAtlas* textureAtlas = m_textures[fontInfo.textureIndex];	
+	TextureAtlas& textureAtlas = m_atlas[fontInfo.textureAtlas.idx];	
 
 	//if truetype present
 	if(font.trueTypeFont != NULL)
@@ -291,7 +294,7 @@ bool FontManager::preloadGlyph(FontHandle handle, const wchar_t* _string)
 		for( size_t i=0, end = wcslen(_string) ; i < end; ++i )
 		{
 			//if glyph cached, continue
-			uint32_t codePoint = _string[i];
+			CodePoint_t codePoint = _string[i];
 			GlyphHash_t::iterator iter = font.cachedGlyphs.find(codePoint);
 			if(iter != font.cachedGlyphs.end())
 			{
@@ -302,29 +305,27 @@ bool FontManager::preloadGlyph(FontHandle handle, const wchar_t* _string)
 			if( !font.trueTypeFont->getGlyphInfo(fontInfo, codePoint, glyphInfo) )
 			{
 				return false;
-			}
+			}			
 
 			//assert font is not too big
-			assert(glyphInfo.width*glyphInfo.height*textureAtlas->getDepth() < MAX_FONT_BUFFER_SIZE);
+			assert(glyphInfo.width * glyphInfo.height * textureAtlas.depth < MAX_FONT_BUFFER_SIZE);
 
 			//bake glyph as bitmap to buffer
 			switch(font.fontInfo.fontType)
 			{
 			case FONT_TYPE_ALPHA:
-					font.trueTypeFont->bakeGlyphAlpha(fontInfo, glyphInfo, m_buffer);
+				font.trueTypeFont->bakeGlyphAlpha(fontInfo, glyphInfo, m_buffer);
 				break;
-				default:
-					assert(false && "TextureType not supported yet");
-			};		
-			
+			default:
+				assert(false && "TextureType not supported yet");
+			};
+
 			//copy bitmap to texture
-			TextureAtlas::Rectangle rect;
-			textureAtlas->addBitmap(glyphInfo.width, glyphInfo.height,m_buffer, rect);
-			
-			glyphInfo.texture_x = rect.x;
-			glyphInfo.texture_x = rect.y;
-			
-						
+			if(!addBitmap(textureAtlas, glyphInfo.width, glyphInfo.height, m_buffer, glyphInfo.texture_x, glyphInfo.texture_y ) )
+			{
+				return false;
+			}
+
 			// store cached glyph
 			font.cachedGlyphs[codePoint] = glyphInfo;
 		}
@@ -343,9 +344,18 @@ const FontInfo& FontManager::getFontInfo(FontHandle handle)
 	
 	return m_cachedFonts[fontIdx].fontInfo;
 }
-bool FontManager::getGlyphInfo(FontHandle fontHandle, uint32_t codePoint, GlyphInfo& outInfo)
+bool FontManager::getGlyphInfo(FontHandle fontHandle, CodePoint_t codePoint, GlyphInfo& outInfo)
 {
-	return false;
+	uint16_t fontIdx = m_fontHandles.getHandleAt(fontHandle.idx);
+	assert(fontIdx != bx::HandleAlloc::invalid);
+
+	GlyphHash_t::iterator iter = m_cachedFonts[fontIdx].cachedGlyphs.find(codePoint);
+	if(iter == m_cachedFonts[fontIdx].cachedGlyphs.end())
+	{
+		return false;
+	}
+	outInfo = iter->second;
+	return true;
 }
 
 }
