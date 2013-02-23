@@ -81,16 +81,16 @@ namespace bgfx_font
 	void setPenPosition(TextBufferHandle _handle, float x, float y);
 	
 	/// append an ASCII/utf-8 string to the buffer using current pen position and color
-	void appendText(TextBufferHandle _handle, const char * _string);
+	void appendText(TextBufferHandle _handle, FontHandle fontHandle, const char * _string);
 
 	/// append a wide char unicode string to the buffer using current pen position and color
-	void appendText_wchar(TextBufferHandle _handle, const wchar_t * _string);
+	void appendText(TextBufferHandle _handle, FontHandle fontHandle, const wchar_t * _string);
 
 	/// append an ASCII/utf-8 string to the buffer using printf formatting and current pen position and color
-	void appendTextPrintf(TextBufferHandle _handle, const char * format, ...);
+	void appendTextPrintf(TextBufferHandle _handle, FontHandle fontHandle, const char * format, ...);
 
 	/// appenda wide char unicode string to the buffer using printf formatting and current pen position and color
-	void appendTextPrintf_wchar(TextBufferHandle _handle, const char * format, ...);
+	void appendTextPrintf(TextBufferHandle _handle, FontHandle fontHandle, const wchar_t * format, ...);
 
 	/// Clear the text buffer and reset its state (pen/color)
 	void clearTextBuffer(TextBufferHandle _handle);

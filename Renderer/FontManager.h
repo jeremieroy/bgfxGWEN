@@ -16,6 +16,7 @@
 //#include "TextureAtlas.h"
 
 #include <bx/handlealloc.h>
+#include <bgfx.h>
 
 #include <stdlib.h> // size_t
 
@@ -45,19 +46,10 @@ namespace stl {
 namespace bgfx_font
 {
 
-/// engine abstraction
-class ITextureFactory
-{
-public:
-	virtual uint16_t createTexture(TextureType textureType, uint16_t width, uint16_t height) = 0;
-	virtual void destroyTexture(uint16_t textureHandle) = 0;
-    virtual void update(uint16_t textureHandle, uint16_t x, uint16_t y, uint16_t width, uint16_t height,uint16_t depth, const uint8_t* data) = 0;
-};
-
 class FontManager
 {
 public:
-	FontManager(ITextureFactory* textureFactory, uint32_t maxGlyphBitmapSize = 64);
+	FontManager();
 	~FontManager();
 
 	/// Add a texture atlas resource to the font manager
@@ -66,7 +58,7 @@ public:
 	TextureAtlasHandle createTextureAtlas(TextureType type, uint16_t width, uint16_t height);
 	
 	/// retrieve a texture resource using the atlas handle
-	uint16_t getTextureHandle(TextureAtlasHandle handle);
+	bgfx::TextureHandle getTextureHandle(TextureAtlasHandle handle);
 
 	/// destroy a texture atlas
 	void destroyTextureAtlas(TextureAtlasHandle handle);
@@ -137,20 +129,19 @@ private:
 	};	
 	bx::HandleAlloc m_filesHandles;
 	CachedFile* m_cachedFiles;	
-
-	ITextureFactory* m_textureFactory;
-
+	
 	struct TextureAtlas
 	{
 		TextureType type;
 		RectanglePacker rectanglePacker;
-		uint16_t textureHandle;
+		bgfx::TextureHandle textureHandle;
 		uint16_t depth;
-	};
-	
+	};	
 	TextureAtlas* m_atlas;
 	bx::HandleAlloc m_atlasHandles;	
 
+	bgfx::TextureHandle createTexture(TextureType textureType, uint16_t width, uint16_t height);
+	void destroyTexture(bgfx::TextureHandle textureHandle);
 	bool addBitmap(TextureAtlas& atlas, uint16_t width, uint16_t height, const uint8_t* data, uint16_t& x, uint16_t& y);
 
 	//temporary buffer to raster glyph

@@ -24,16 +24,20 @@ public:
 	
 	/// TextBuffer is bound to a fontManager for glyph retrieval
 	/// @remark the ownership of the manager is not taken
-	TextBuffer(FontManager* fontManager);
+	TextBuffer();
 	~TextBuffer();
+	
+	void setFontManager(FontManager* fontManager);
 
-	void setStyle(uint32_t flags = STYLE_NORMAL);
-	void setTextColor(uint32_t rgba = 0x000000FF);
-	void setBackgroundColor(uint32_t rgba = 0x000000FF);
+	void setStyle(uint32_t flags = STYLE_NORMAL) { m_styleFlags = flags; }
+	void setTextColor(uint32_t rgba = 0x000000FF) { m_textColor = rgba; }
+	void setBackgroundColor(uint32_t rgba = 0x000000FF) { m_backgroundColor = rgba; }
 
-	void setOverlineColor(uint32_t rgba = 0x000000FF);
-	void setUnderlineColor(uint32_t rgba = 0x000000FF);
-	void setStrikeThroughColor(uint32_t rgba = 0x000000FF);	
+	void setOverlineColor(uint32_t rgba = 0x000000FF) { m_overlineColor = rgba; }
+	void setUnderlineColor(uint32_t rgba = 0x000000FF) { m_underlineColor = rgba; }
+	void setStrikeThroughColor(uint32_t rgba = 0x000000FF) { m_strikeThroughColor = rgba; }
+	
+	void setPenPosition(float x, float y) { m_penX = x; m_penY = y; }
 
 	/// append an ASCII/utf-8 string to the buffer using current pen position and color
 	void appendText(FontHandle fontHandle, const char * _string);
@@ -50,17 +54,19 @@ public:
 	/// Clear the text buffer and reset its state (pen/color)
 	void clearTextBuffer();
 	
-	/// number of vertex in the vertex buffer
-	uint32_t getVertexCount(){ return m_vertexCount; }
-
 	/// get pointer to the vertex buffer to submit it to the graphic card
 	const TextVertex* getVertexBuffer(){ return m_vertexBuffer; }
-
-	/// number of index in the index buffer
-	uint32_t getIndexCount(){ return m_vertexCount; }
-
+	/// number of vertex in the vertex buffer
+	uint32_t getVertexCount(){ return m_vertexCount; }
+	/// size in bytes of a vertex
+	uint32_t getVertexSize(){ return sizeof(TextVertex); }
+		
 	/// get a pointer to the index buffer to submit it to the graphic
 	const uint16_t* getIndexBuffer(){ return m_indexBuffer; }
+	/// number of index in the index buffer
+	uint32_t getIndexCount(){ return m_vertexCount; }
+	/// size in bytes of an index
+	uint32_t getIndexSize(){ return sizeof(uint16_t); }
 
 private:
 	void appendGlyph(CodePoint_t codePoint, const FontInfo& font, const GlyphInfo& glyphInfo);

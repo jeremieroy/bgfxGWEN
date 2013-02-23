@@ -8,12 +8,8 @@ namespace bgfx_font
 
 const size_t MAX_BUFFERED_CHARACTERS = 8192;
 
-TextBuffer::TextBuffer(FontManager* fontManager) : m_fontManager(fontManager)
-{
-	assert(m_fontManager != NULL);
-	assert(m_vertexBuffer != NULL);
-	assert(m_indexBuffer != NULL);
-
+TextBuffer::TextBuffer()
+{	
 	m_styleFlags = STYLE_NORMAL;
 
 	m_textColor = 0x000000FF;
@@ -28,7 +24,7 @@ TextBuffer::TextBuffer(FontManager* fontManager) : m_fontManager(fontManager)
 	m_originY = 0;
 	m_lineAscender = 0;
 	m_lineDescender = 0;
-
+	m_fontManager = NULL;
 	m_vertexBuffer = new TextVertex[MAX_BUFFERED_CHARACTERS * 4];
 	m_indexBuffer = new uint16_t[MAX_BUFFERED_CHARACTERS * 6];
 	m_vertexCount = 0;
@@ -40,6 +36,11 @@ TextBuffer::~TextBuffer()
 {
 	delete[] m_vertexBuffer;
 	delete[] m_indexBuffer;
+}
+
+void TextBuffer::setFontManager(FontManager* fontManager)
+{
+	m_fontManager = fontManager;
 }
 
 void TextBuffer::appendText(FontHandle fontHandle, const char * _string)

@@ -8,20 +8,18 @@ namespace bgfx_font
 const uint16_t MAX_OPENED_FILES = 64;
 const uint16_t MAX_OPENED_FONT = 64;
 const uint16_t MAX_TEXTURE_ATLAS = 4;
-
 const uint32_t MAX_FONT_BUFFER_SIZE = 128*128*4;
 
-FontManager::FontManager(ITextureFactory* textureFactory, uint32_t maxGlyphBitmapSize):
-m_textureFactory(textureFactory),m_filesHandles(MAX_OPENED_FILES), m_fontHandles(MAX_OPENED_FONT), m_atlasHandles(MAX_TEXTURE_ATLAS)
+FontManager::FontManager():m_filesHandles(MAX_OPENED_FILES), m_fontHandles(MAX_OPENED_FONT), m_atlasHandles(MAX_TEXTURE_ATLAS)
 {
 	m_cachedFiles = new CachedFile[MAX_OPENED_FILES];
 	m_cachedFonts = new CachedFont[MAX_OPENED_FONT];
 	m_atlas = new TextureAtlas[MAX_TEXTURE_ATLAS];
-	m_buffer = new uint8_t[maxGlyphBitmapSize*maxGlyphBitmapSize];
+	m_buffer = new uint8_t[MAX_FONT_BUFFER_SIZE];
 }
 
 FontManager::~FontManager()
-{	
+{
 	assert(m_fontHandles.getNumHandles() == 0 && "All the fonts must be destroyed before destroying the manager");
 	delete [] m_cachedFonts;
 
@@ -36,8 +34,8 @@ FontManager::~FontManager()
 
 TextureAtlasHandle FontManager::createTextureAtlas(TextureType type, uint16_t width, uint16_t height)
 {
-	uint16_t textureHandle = m_textureFactory->createTexture(type, width, height);
-	assert(textureHandle != INT16_MAX);
+	bgfx::TextureHandle textureHandle = createTexture(type, width, height);
+	assert(textureHandle.idx != bgfx::invalidHandle);
 
 	assert(width >= 16 );
 	assert(height >= 4 );
@@ -58,7 +56,7 @@ TextureAtlasHandle FontManager::createTextureAtlas(TextureType type, uint16_t wi
 	return TextureAtlasHandle(atlasIdx);
 }
 
-uint16_t FontManager::getTextureHandle(TextureAtlasHandle handle)
+bgfx::TextureHandle FontManager::getTextureHandle(TextureAtlasHandle handle)
 {
 	assert(handle.isValid());
 	uint16_t atlasIdx = m_atlasHandles.getHandleAt(handle.idx);
@@ -72,24 +70,11 @@ void FontManager::destroyTextureAtlas(TextureAtlasHandle handle)
 	assert(handle.isValid());
 	uint16_t idx = m_atlasHandles.getHandleAt(handle.idx);
 	assert(idx != bx::HandleAlloc::invalid);
-	
-	m_textureFactory->destroyTexture(idx);	
+	bgfx::TextureHandle hd;
+	hd.idx = idx;
+	destroyTexture(hd);	
 	m_atlasHandles.free(handle.idx);
 }
-
-bool FontManager::addBitmap(TextureAtlas& atlas, uint16_t width, uint16_t height, const uint8_t* data, uint16_t& x, uint16_t& y)
-{	
-	// We want each bitmap to be separated by at least one black pixel
-	if(!atlas.rectanglePacker.addRectangle(width + 1, height + 1,  x, y))
-	{
-		return false;
-	}
-
-	//but only update the bitmap region	(not the 1 pixel separator)
-	m_textureFactory->update(atlas.textureHandle, x, y, width, height,atlas.depth, data);
-	return true;
-}
-
 
 TrueTypeHandle FontManager::loadTrueTypeFromFile(const char* fontPath, int32_t fontIndex)
 {
@@ -357,6 +342,48 @@ bool FontManager::getGlyphInfo(FontHandle fontHandle, CodePoint_t codePoint, Gly
 		return false;
 	}
 	outInfo = iter->second;
+	return true;
+}
+
+// ****************************************************************************
+
+bgfx::TextureHandle FontManager::createTexture(TextureType textureType, uint16_t width, uint16_t height)
+{
+	//should I allocate memory here ?
+	const bgfx::Memory* mem = NULL;
+	uint32_t flags = BGFX_TEXTURE_MIN_POINT|BGFX_TEXTURE_MAG_POINT|BGFX_TEXTURE_U_CLAMP|BGFX_TEXTURE_V_CLAMP;
+	//uint32_t flags = BGFX_TEXTURE_NONE;
+
+	bgfx::TextureHandle handle;
+	switch(textureType)
+	{
+		case TEXTURE_TYPE_ALPHA:
+			handle = bgfx::createTexture2D(width, height, 1, bgfx::TextureFormat::L8, flags, mem);
+		break;
+		case TEXTURE_TYPE_RGBA:
+			handle = bgfx::createTexture2D(width, height, 1, bgfx::TextureFormat::BGRA8, flags, mem);
+		break;
+	};
+	return handle;
+}
+
+void FontManager::destroyTexture(bgfx::TextureHandle handle)
+{
+	bgfx::destroyTexture(handle);
+}
+
+bool FontManager::addBitmap(TextureAtlas& atlas, uint16_t width, uint16_t height, const uint8_t* data, uint16_t& x, uint16_t& y)
+{	
+	// We want each bitmap to be separated by at least one black pixel
+	if(!atlas.rectanglePacker.addRectangle(width + 1, height + 1,  x, y))
+	{
+		return false;
+	}
+
+	//this allocation could maybe be avoided, will see later
+	const bgfx::Memory* mem = bgfx::alloc(width*height*atlas.depth);
+	memcpy(mem->data, data, width*height*atlas.depth);	
+	bgfx::updateTexture2D(atlas.textureHandle, 0, x, y, width, height, mem);
 	return true;
 }
 
