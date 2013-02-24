@@ -22,7 +22,6 @@
 #include <stdio.h>
 #include <string.h>
 
-
 static const char* s_shaderPath = NULL;
 
 static void shaderFilePath(char* _out, const char* _name)
@@ -146,64 +145,35 @@ int _main_(int _argc, char** _argv)
 		s_shaderPath = "shaders/gles/";
 		break;
 	}
+
+	//init the text rendering system
 	bgfx_font::init(s_shaderPath);
-
-   
-    //Gwen::Renderer::bgfxRenderer * pRenderer = new Gwen::Renderer::bgfxRenderer(0,s_shaderPath, "textures/");
-	//pRenderer->Init();
-
-	//
-	// Create a GWEN skin
-	//
-	//Gwen::Skin::TexturedBase* pSkin = new Gwen::Skin::TexturedBase( pRenderer );
-	//pSkin->Init("DefaultSkin.png");
-
-	//Gwen::Skin::Simple* pSkin = new Gwen::Skin::Simple();
-	//pSkin->SetRender(pRenderer);
-	//pSkin->Init("DefaultSkin.png");
-
-	//
-	// Create a Canvas (it's root, on which all other GWEN panels are created)
-	//
-	//Gwen::Controls::Canvas* pCanvas = new Gwen::Controls::Canvas( pSkin );
-	//pCanvas->SetSize( 998, 650 - 24 );
-	//pCanvas->SetDrawBackground( true );
-	//pCanvas->SetBackgroundColor( Gwen::Color( 150, 170, 170, 255 ) );
-
-	//
-	// Create our unittest control (which is a Window with controls in it)
-	//
-	//UnitTest* pUnit = new UnitTest( pCanvas );
-	//pUnit->SetPos( 10, 10 );
-
-	//
-	// Create a Windows Control helper 
-	// (Processes Windows MSG's and fires input at GWEN)
-	//
-	//Gwen::Input::Windows GwenInput;
-	//GwenInput.Initialize( pCanvas );
-    
-	//bgfx_font::TrueTypeFont* font = new  bgfx_font::TrueTypeFont();
-    //font->loadFont("c:/windows/fonts/times.ttf");
-
-	bgfx_font::TextureAtlasHandle atlas = bgfx_font::createTextureAtlas(bgfx_font::TEXTURE_TYPE_ALPHA, 512,512);
+    //allocate a texture atlas
+	bgfx_font::TextureAtlasHandle atlas = bgfx_font::createTextureAtlas(bgfx_font::TEXTURE_TYPE_ALPHA, 512, 512);
  	
+	//load truetype files
 	bgfx_font::TrueTypeHandle times_tt = bgfx_font::loadTrueTypeFont("c:/windows/fonts/times.ttf");
-	//bgfx_font::TrueTypeHandle comic_tt = bgfx_font::loadTrueTypeFont("c:/windows/fonts/comic.ttf");
-	//bgfx_font::TrueTypeHandle calibri_tt = bgfx_font::loadTrueTypeFont("c:/windows/fonts/calibri.ttf");
+	bgfx_font::TrueTypeHandle calibri_tt = bgfx_font::loadTrueTypeFont("c:/windows/fonts/calibri.ttf");
 
+	
 	std::vector<bgfx_font::FontHandle> fonts;
 	for(int i = 12; i < 36; i+=2)
 	{		
+		//instantiate a usable font
 		bgfx_font::FontHandle font = bgfx_font::createFontByEmSize(times_tt, i);
-		bgfx_font::preloadGlyph(font, L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ \n");
+		//preload glyph and generate (generate bitmap's)
+		bgfx_font::preloadGlyph(font, L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ. \n");
+
 		fonts.push_back(font);
-		
-		//bgfx_font::FontHandle font = bgfx_font::getFontByPixelSize(comic_tt, i);
-		//bgfx_font::preloadGlyph(font, L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ ");	
-		//fonts.push_back(font);
 	}
 
+	bgfx_font::FontHandle calibriFont = bgfx_font::createFontByEmSize(calibri_tt, 34);
+//	bgfx_font::preloadGlyph(calibriFont, L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ. \n");
+
+	//You can unload the truetype files at this stage
+	bgfx_font::unloadTrueTypeFont(times_tt);	
+	bgfx_font::unloadTrueTypeFont(calibri_tt);
+	
 	// Create vertex stream declaration.
 	bgfx::VertexDecl vertexDecl;
 	vertexDecl.begin();
@@ -244,21 +214,22 @@ int _main_(int _argc, char** _argv)
 	bgfx::destroyVertexShader(vsh);
 	bgfx::destroyFragmentShader(fsh);
 	
-	bgfx_font::TextBufferHandle staticText = bgfx_font::createTextBuffer(bgfx_font::FONT_TYPE_ALPHA, bgfx_font::STATIC, 1024);
-	bgfx_font::setPenPosition(staticText, 520.0f,500.f);
+	bgfx_font::TextBufferHandle staticText = bgfx_font::createTextBuffer(bgfx_font::FONT_TYPE_ALPHA, bgfx_font::STATIC);
+	bgfx_font::setPenPosition(staticText, 540.0f,600.f);
+	bgfx_font::setTextStyle(staticText, bgfx_font::STYLE_BACKGROUND);
+	bgfx_font::setTextBackgroundColor(staticText, 0x110505FF);
 	
 	for(size_t i = 0; i< fonts.size(); ++i)
 	{		
-		bgfx_font::appendText(staticText, fonts[i], L"The quick brown fox jumps over the lazy dog\n");		
+		//test vertical alignment
+		//bgfx_font::appendText(staticText, fonts[i], L"AgThJkmlj");
+		bgfx_font::appendText(staticText, fonts[i], L"The quick brown fox jumps over the lazy dog\n");
 	}
 	
-
-	bgfx_font::TextBufferHandle staticText2 = bgfx_font::createTextBuffer(bgfx_font::FONT_TYPE_ALPHA, bgfx_font::STATIC, 1024);
-	//bgfx_font::setPenPosition(staticText2, 52.f,52.f);
-	//bgfx_font::appendText(staticText2, fonts[6], L"The quick brown fox jump over the lazy dogs");
-
-    //void bakeGlyphAlpha(uint32_t codePoint, float size, uint8_t* outBuffer);
-
+	bgfx_font::TextBufferHandle transientText = bgfx_font::createTextBuffer(bgfx_font::FONT_TYPE_ALPHA, bgfx_font::TRANSIENT);	
+	bgfx_font::setPenPosition(transientText, 100.0f,100.0f);
+		
+	float ra = 0, rb=0, rg=0;
     while (!processEvents(width, height, debug, reset) )
 	{
 		// Set view 0 default viewport.
@@ -268,10 +239,20 @@ int _main_(int _argc, char** _argv)
 		// if no other draw calls are submitted to view 0.
 		bgfx::submit(0);
 
+		int64_t now = bx::getHPCounter();
+		static int64_t last = now;
+		const int64_t frameTime = now - last;
+		last = now;
+		const double freq = double(bx::getHPFrequency() );
+		const double toMs = 1000.0/freq;
+		float time = (float)(bx::getHPCounter()/double(bx::getHPFrequency() ) );
+
+
 		// Use debug font to print information about this example.
 		bgfx::dbgTextClear();
 		bgfx::dbgTextPrintf(0, 1, 0x4f, "bgfx/examples/00-helloworld");
 		bgfx::dbgTextPrintf(0, 2, 0x6f, "Description: Initialization and debug text.");
+		bgfx::dbgTextPrintf(0, 3, 0x0f, "Frame: % 7.3f[ms]", double(frameTime)*toMs);
 
 		
 		float at[3] = { -10.0f, -10.0f, 0.0f };
@@ -304,11 +285,24 @@ int _main_(int _argc, char** _argv)
 		// Submit primitive for rendering to view 0.
 		bgfx::submit(0);
 
-
-		bgfx_font::submitTextBuffer(staticText, 0);
-		//bgfx_font::submitTextBuffer(staticText2, 0);
-		//pCanvas->RenderCanvas();
 		
+		bgfx_font::submitTextBuffer(staticText, 0);	
+		
+		bgfx_font::clearTextBuffer(transientText);
+		bgfx_font::setPenPosition(transientText, 100.0f + cos(time)*10.0f, 100.0f + sin(time) *10.0f);
+		
+		uint32_t r = (uint32_t) (128.0f * ( 1.0f + cos ( time * 0.3f) )) ;
+		uint32_t g = (uint32_t) (128.0f * ( 1.0f + cos ( time * 0.5f ) )) ;
+		uint32_t b = (uint32_t) (128.0f * ( 1.0f + cos ( time * 0.1f ) )) ;
+		uint32_t rgba = r << 24 | g << 16 | b<<8 | 255 ;
+
+		bgfx_font::setTextColor(transientText, rgba);
+		bgfx_font::appendText(transientText, calibriFont, "SubPixel rendering is in my todo list.");
+
+
+		bgfx_font::submitTextBuffer(transientText, 0);
+		
+
         // Advance to next frame. Rendering thread will be kicked to 
 		// process submitted rendering primitives.
 		bgfx::frame();
@@ -317,73 +311,23 @@ int _main_(int _argc, char** _argv)
 	bgfx::destroyIndexBuffer(ibh);
 	bgfx::destroyVertexBuffer(vbh);
 	bgfx::destroyUniform(u_texColor);
-	//bgfx::destroyUniform(u_color0);
 
 	bgfx::destroyProgram(program);
 
 
-	bgfx_font::unloadTrueTypeFont(times_tt);
-	//bgfx_font::unloadTrueTypeFont(comic_tt);
-	//bgfx_font::unloadTrueTypeFont(calibri_tt);
+	
 
 	for(size_t i=0; i<fonts.size();++i)
 	{
 		bgfx_font::destroyFont(fonts[i]);
 	}
+	bgfx_font::destroyFont(calibriFont);	
 	bgfx_font::destroyTextBuffer(staticText);
-	bgfx_font::destroyTextBuffer(staticText2);
+	bgfx_font::destroyTextBuffer(transientText);
 	bgfx_font::destroyTextureAtlas(atlas);
 	bgfx_font::shutdown();
 	// Shutdown bgfx.
     bgfx::shutdown();
 
 	return 0;
-
-    /*
-	//
-	// Begin the main game loop
-	//
-	MSG msg;
-	while( true )
-	{
-		// Skip out if the window is closed
-		if ( !IsWindowVisible( g_pHWND ) )
-			break;
-
-		// If we have a message from windows..
-		if ( PeekMessage( &msg, NULL, 0, 0, PM_REMOVE ) )
-		{
-			// .. give it to the input handler to process
-			GwenInput.ProcessMessage( msg );
-
-			// if it's QUIT then quit..
-			if ( msg.message == WM_QUIT )
-				break;
-
-
-			// Handle the regular window stuff..
-			TranslateMessage(&msg);
-			DispatchMessage(&msg);
-
-		}
-
-		// Main OpenGL Render Loop
-		{
-			glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-
-			pCanvas->RenderCanvas();
-
-			SwapBuffers( GetDC( g_pHWND ) );
-		}
-	}
-
-	// Clean up OpenGL
-	wglMakeCurrent( NULL, NULL );
-	wglDeleteContext( OpenGLContext );
-
-	delete pCanvas;
-	delete pSkin;
-	delete pRenderer;
-    */
-
 }

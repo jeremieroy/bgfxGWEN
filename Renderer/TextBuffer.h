@@ -5,18 +5,7 @@
 namespace bgfx_font
 {
 
-struct TextVertex
-{
-	void set(int16_t _x, int16_t _y, uint16_t _u, uint16_t _v, uint32_t _rgba)
-	{
-		x = _x; y = _y; 
-		u = _u; v = _v;
-		rgba = _rgba;
-	}
-	int16_t x,y;
-	uint16_t u,v;
-	uint32_t rgba;
-};
+
 
 class TextBuffer
 {
@@ -55,7 +44,7 @@ public:
 	void clearTextBuffer();
 	
 	/// get pointer to the vertex buffer to submit it to the graphic card
-	const TextVertex* getVertexBuffer(){ return m_vertexBuffer; }
+	const uint8_t* getVertexBuffer(){ return (uint8_t*) m_vertexBuffer; }
 	/// number of vertex in the vertex buffer
 	uint32_t getVertexCount(){ return m_vertexCount; }
 	/// size in bytes of a vertex
@@ -70,9 +59,11 @@ public:
 
 	bgfx::TextureHandle getTextureHandle() { return m_textureHandle; }
 	void getTextureSize(uint16_t& width, uint16_t& height) { width = m_textureWidth; height = m_textureHeight; }
+	void getBlackGlyph(int16_t& x0, int16_t& y0, int16_t& x1, int16_t& y1) { x0 = m_black_x0; y0 = m_black_y0; x1 = m_black_x1; y1 = m_black_y1; }
 
 private:
 	void appendGlyph(CodePoint_t codePoint, const FontInfo& font, const GlyphInfo& glyphInfo);
+	void verticalCenterLastLine(int16_t dy);
 	uint32_t toABGR(uint32_t rgba) 
 	{ 
 		return (((rgba >> 0) & 0xff) << 24) |  
@@ -105,7 +96,26 @@ private:
 	uint16_t padding__;
 	uint16_t m_textureWidth;
 	uint16_t m_textureHeight;
-		
+	int16_t m_black_x0;
+	int16_t m_black_y0;
+	int16_t m_black_x1;
+	int16_t m_black_y1;
+
+
+	
+	struct TextVertex
+	{
+		void set(int16_t _x, int16_t _y, int16_t _u, int16_t _v, uint32_t _rgba)
+		{
+			x = _x; y = _y; 
+			u = _u; v = _v;
+			rgba = _rgba;
+		}
+		int16_t x,y;
+		int16_t u,v;
+		uint32_t rgba;
+	};
+
 	TextVertex* m_vertexBuffer;
 	uint16_t* m_indexBuffer;
 	

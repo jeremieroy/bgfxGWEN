@@ -10,10 +10,11 @@ public:
 	~TrueTypeFont();
 
 	/// Initialize from  an external buffer
-	/// @remark The ownership of the buffer stays external, and you must ensure it stays valid up to this object lifetime
+	/// @remark The ownership of the buffer is external, and you must ensure it stays valid up to this object lifetime
 	/// @return true if the initialization succeed
     bool init(const uint8_t* buffer, uint32_t size, int32_t fontIndex = 0);
 
+	/// seems hacky :s
 	bool isValid() { return m_font!=NULL; }
 
 	/// return a font descriptor for a given pixelSize

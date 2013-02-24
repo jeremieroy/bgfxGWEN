@@ -60,6 +60,7 @@ public:
 	/// retrieve a texture resource using the atlas handle
 	bgfx::TextureHandle getTextureHandle(TextureAtlasHandle handle);
 	void getTextureSize(TextureAtlasHandle handle, uint16_t& width, uint16_t& height);
+	void getBlackGlyphUV(TextureAtlasHandle handle, int16_t& x0, int16_t& y0, int16_t& x1, int16_t& y1);
 	/// destroy a texture atlas
 	void destroyTextureAtlas(TextureAtlasHandle handle);
 
@@ -97,6 +98,8 @@ public:
 	/// if the Font is a baked font, this only do validation on the characters
 	bool preloadGlyph(FontHandle handle, const wchar_t* _string);
 
+	bool preloadGlyph(FontHandle handle, CodePoint_t character);
+
 	/// bake a font to disk (the set of preloaded glyph)
 	/// @return true if the baking succeed, false otherwise
 	bool saveBakedFont(FontHandle handle, const char* fontDirectory, const char* fontName );
@@ -110,6 +113,7 @@ public:
 	/// @return true if the Glyph is available
 	bool getGlyphInfo(FontHandle fontHandle, CodePoint_t codePoint, GlyphInfo& outInfo);
 private:
+	
 	
 	typedef stl::unordered_map<CodePoint_t, GlyphInfo> GlyphHash_t;	
 	// cache font data
@@ -135,9 +139,16 @@ private:
 		TextureType type;
 		RectanglePacker rectanglePacker;
 		bgfx::TextureHandle textureHandle;
+		
 		uint16_t width;
 		uint16_t height;
 		uint16_t depth;
+		uint16_t _padding_;
+
+		int16_t m_black_x0;
+		int16_t m_black_y0;
+		int16_t m_black_x1;
+		int16_t m_black_y1;
 	};	
 	TextureAtlas* m_atlas;
 	bx::HandleAlloc m_atlasHandles;	

@@ -60,7 +60,7 @@ void TextBufferManager::init(FontManager* fontManager, const char* shaderPath)
 	m_vertexDecl.begin();
 	m_vertexDecl.add(bgfx::Attrib::Position, 2, bgfx::AttribType::Int16);
 	m_vertexDecl.add(bgfx::Attrib::TexCoord0, 2, bgfx::AttribType::Int16,true);
-	m_vertexDecl.add(bgfx::Attrib::Color0, 4, bgfx::AttribType::Uint8);
+	m_vertexDecl.add(bgfx::Attrib::Color0, 4, bgfx::AttribType::Uint8,true);
 	m_vertexDecl.end();
 
 	m_u_texColor = bgfx::createUniform("u_texColor", bgfx::UniformType::Uniform1iv);
@@ -195,6 +195,18 @@ void TextBufferManager::submitTextBuffer(TextBufferHandle _handle, uint8_t _id, 
 			{
 				ibh.idx = bc.indexBufferHandle;
 				vbh.idx = bc.vertexBufferHandle;
+
+				static int i=0;
+				//if(i++ < 5)
+				{				
+				mem = bgfx::alloc(indexSize);
+				memcpy(mem->data, bc.textBuffer.getIndexBuffer(), indexSize);
+				bgfx::updateDynamicIndexBuffer(ibh, mem);
+
+				mem = bgfx::alloc(vertexSize);
+				memcpy(mem->data, bc.textBuffer.getVertexBuffer(), vertexSize);
+				bgfx::updateDynamicVertexBuffer(vbh, mem);				
+				}
 			}
 			bgfx::setVertexBuffer(vbh,  bc.textBuffer.getVertexCount());
 			bgfx::setIndexBuffer(ibh, bc.textBuffer.getIndexCount());

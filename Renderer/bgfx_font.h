@@ -7,8 +7,8 @@ namespace bgfx_font
 	/// initialize bgfx_text library
 	/// Create font rendering shader program, and vertex format.
 	/// @remark assume bgfx is initialized
-	void init(const char* shaderPath);
-	
+	void init(const char* shaderPath);	
+
 	/// shutdown bgfx_text library
 	/// @remark assume bgfx is (still) initialized
 	void shutdown();
@@ -55,7 +55,7 @@ namespace bgfx_font
 	void bakeAndSaveFont(FontHandle _handle, const char * _fontPath, const char * _fontName);
 		
 	/// Create a text buffer of the specified font type. It will only be compatible with fonts of the same type.
-	TextBufferHandle createTextBuffer(FontType _type, BufferType bufferType, uint32_t _maxCharacterCount);
+	TextBufferHandle createTextBuffer(FontType _type, BufferType bufferType);
 	
 	/// Destroy a text buffer
 	void destroyTextBuffer(TextBufferHandle _handle);
@@ -88,6 +88,8 @@ namespace bgfx_font
 	void appendText(TextBufferHandle _handle, FontHandle _fontHandle, const wchar_t * _string);
 
 	/// append an ASCII/utf-8 string to the buffer using printf formatting and current pen position and color
+	/// @remark may have erroneous behavior when you rely on character counting in your format outside of the ASCII range
+	/// writing utf8 aware printf is cumbersome :(
 	void appendTextPrintf(TextBufferHandle _handle, FontHandle _fontHandle, const char * _format, ...);
 
 	/// appenda wide char unicode string to the buffer using printf formatting and current pen position and color

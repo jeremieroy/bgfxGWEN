@@ -1,6 +1,6 @@
 #include "TextBuffer.h"
 #include "FontManager.h"
-
+#include "utf8_helper.h"
 #include <assert.h>
 
 namespace bgfx_font
@@ -22,14 +22,24 @@ TextBuffer::TextBuffer()
 	m_penY = 0;
 	m_originX = 0;
 	m_originY = 0;
+	m_lineAscender = 0;
+	m_lineDescender = 0;
 	m_fontManager = NULL;
+	m_textureHandle.idx = bgfx::invalidHandle;
+
+	m_textureWidth = 0;
+	m_textureHeight = 0;
+	m_black_x0 = 0;
+	m_black_y0 = 0;
+	m_black_x1 = 0;
+	m_black_y1 = 0;
+	
 	m_vertexBuffer = new TextVertex[MAX_BUFFERED_CHARACTERS * 4];
 	m_indexBuffer = new uint16_t[MAX_BUFFERED_CHARACTERS * 6];
 	m_vertexCount = 0;
 	m_indexCount = 0;
 	m_lineStartIndex = 0;
-	m_lineAscender = 0;
-	m_lineDescender = 0;
+	
 }
 
 TextBuffer::~TextBuffer()
@@ -46,8 +56,50 @@ void TextBuffer::setFontManager(FontManager* fontManager)
 
 
 void TextBuffer::appendText(FontHandle fontHandle, const char * _string)
-{
+{	
+	GlyphInfo glyph;
+	const FontInfo& font = m_fontManager->getFontInfo(fontHandle);
 
+	if( m_textureHandle.idx == bgfx::invalidHandle)
+	{
+		m_textureHandle = m_fontManager->getTextureHandle(font.textureAtlas);
+		m_fontManager->getTextureSize(font.textureAtlas, m_textureWidth, m_textureHeight);
+		m_fontManager->getBlackGlyphUV(font.textureAtlas, m_black_x0, m_black_y0, m_black_x1, m_black_y1);	
+	}else
+	{
+		assert((m_textureHandle.idx ==  m_fontManager->getTextureHandle(font.textureAtlas).idx) && "You cannot mix font from different atlas in the same textbuffer");
+	}
+	
+	if(m_vertexCount == 0)
+	{
+		m_originX = m_penX;
+		m_originY = m_penY;
+		m_lineDescender = 0;// font.descender;
+		m_lineAscender = 0;//font.ascender;
+	}
+
+
+	uint32_t codepoint;
+	uint32_t state = 0;
+
+	for (; *_string; ++_string)
+		if (!utf8_decode(&state, &codepoint, *_string))
+		{
+			if(m_fontManager->getGlyphInfo(fontHandle, (CodePoint_t)codepoint, glyph))
+			{
+				appendGlyph((CodePoint_t)codepoint, font, glyph);
+			}else
+			{
+				assert(false && "Glyph not found");
+			}
+		}
+	  //printf("U+%04X\n", codepoint);
+
+	if (state != UTF8_ACCEPT)
+	{
+	//	assert(false && "The string is not well-formed");
+		return; //"The string is not well-formed\n"
+	}
 }
 
 void TextBuffer::appendText(FontHandle fontHandle, const wchar_t * _string)
@@ -58,7 +110,8 @@ void TextBuffer::appendText(FontHandle fontHandle, const wchar_t * _string)
 	if( m_textureHandle.idx == bgfx::invalidHandle)
 	{
 		m_textureHandle = m_fontManager->getTextureHandle(font.textureAtlas);
-		m_fontManager->getTextureSize(font.textureAtlas, m_textureWidth, m_textureHeight);
+		m_fontManager->getTextureSize(font.textureAtlas, m_textureWidth, m_textureHeight);		
+		m_fontManager->getBlackGlyphUV(font.textureAtlas, m_black_x0, m_black_y0, m_black_x1, m_black_y1);	
 	}else
 	{
 		assert((m_textureHandle.idx ==  m_fontManager->getTextureHandle(font.textureAtlas).idx) && "You cannot mix font from different atlas in the same textbuffer");
@@ -75,10 +128,6 @@ void TextBuffer::appendText(FontHandle fontHandle, const wchar_t * _string)
 	//parse string
 	for( size_t i=0, end = wcslen(_string) ; i < end; ++i )
 	{
-		if(i==4)
-		{
-			int yo=9;
-		}
 		//if glyph cached, continue
 		uint32_t codePoint = _string[i];
 		if(m_fontManager->getGlyphInfo(fontHandle, codePoint, glyph))
@@ -93,7 +142,11 @@ void TextBuffer::appendText(FontHandle fontHandle, const wchar_t * _string)
 
 void TextBuffer::appendTextPrintf(FontHandle fontHandle, const char * format, ...)
 {
-
+	/*
+	static CodePoint_t buffer[MAX_BUFFERED_CHARACTERS+1];
+	size_t count;
+	utf8_countCodePoints(
+	*/
 }
 
 void TextBuffer::appendTextPrintf(FontHandle fontHandle, const wchar_t * format, ...)
@@ -117,7 +170,7 @@ void TextBuffer::appendGlyph(CodePoint_t codePoint, const FontInfo& font, const 
 	//handle newlines
 	if(codePoint == L'\n' )
     {
-        m_penX = m_originX;		
+        m_penX = m_originX;
         m_penY += m_lineDescender;
 		m_lineDescender = 0;// font.descender * font.scale;
 		m_lineAscender = 0;//font.ascender* font.scale;
@@ -129,7 +182,7 @@ void TextBuffer::appendGlyph(CodePoint_t codePoint, const FontInfo& font, const 
     {
         float y = m_penY;
         m_penY -= ((font.ascender  * font.scale) - m_lineAscender);
-		//text_buffer_move_last_line( self, (int)(y-pen->y) );
+		verticalCenterLastLine((int16_t) ceil((y-m_penY)));		
         m_lineAscender = (font.ascender * font.scale);
     }
 
@@ -147,45 +200,51 @@ void TextBuffer::appendGlyph(CodePoint_t codePoint, const FontInfo& font, const 
     }
 	*/
     m_penX += kerning;
-
-
-
-
+	
 	// TODO handle background
-/*
 	// if background not invisible
-	if(m_backgroundColor & 0x000000FF)
+	if(m_styleFlags & STYLE_BACKGROUND &&  m_backgroundColor & 0x000000FF)
 	{
-		int16_t x0 = ( m_penX - kerning );
-		int16_t y0 = ( m_penY + fontDescender );
+		int16_t x0 = ceil( m_penX - kerning );
+		int16_t y0 = ceil( m_penY  + m_lineDescender - font.lineGap * font.scale);//+ font.descender* font.scale);
 
-		int16_t x1 = (int16_t)( (float)x0 + glyphInfo.advance_x );
-		int16_t y1 = (int)( y0 + fontHeight + fontLineGap );
-		float s0 = black.s0;
-		float t0 = black.t0;
-		float s1 = black.s1;
-		float t1 = black.t1;
-		uint32_t color = m_backgroundColor;
+		int16_t x1 = (int16_t)ceil( (float)x0 + (glyphInfo.advance_x) * font.scale);
+		int16_t y1 = (int16_t)ceil( y0 + m_lineDescender - m_lineAscender);// (font.ascender - font.descender  - font.lineGap ) * font.scale );
+		
+		/*
+		float x0_precise = m_penX + (glyphInfo.offset_x);// * font.scale);
+		int16_t x0 = (int16_t)( x0_precise);
+		int16_t y0 = (int16_t)( m_penY - (glyphInfo.offset_y));// * font.scale ));
+		int16_t x1 = (int16_t)( x0 + glyphInfo.width );
+		int16_t y1 = (int16_t)( y0 - glyphInfo.height );
 
-		m_vertexBuffer[m_vertexCount] .set(x0, y0, s0, t0, color
-			SET_GLYPH_VERTEX(vertices[vcount+0],
-			(int)x0,y0,0,  s0,t0,  r,g,b,a,  x0-((int)x0), gamma );
-		SET_GLYPH_VERTEX(vertices[vcount+1],
-			(int)x0,y1,0,  s0,t1,  r,g,b,a,  x0-((int)x0), gamma );
-		SET_GLYPH_VERTEX(vertices[vcount+2],
-			(int)x1,y1,0,  s1,t1,  r,g,b,a,  x1-((int)x1), gamma );
-		SET_GLYPH_VERTEX(vertices[vcount+3],
-			(int)x1,y0,0,  s1,t0,  r,g,b,a,  x1-((int)x1), gamma );
-		indices[icount + 0] = vcount+0;
-		indices[icount + 1] = vcount+1;
-		indices[icount + 2] = vcount+2;
-		indices[icount + 3] = vcount+0;
-		indices[icount + 4] = vcount+2;
-		indices[icount + 5] = vcount+3;
-		vcount += 4;
-		icount += 6;
+		float shift = x0_precise - x0;
+		*/
+		float xMult = 32767.0f / (float) (m_textureWidth);
+		float yMult = 32767.0f / (float) (m_textureHeight);
+
+		//TODO: Understand why I have to add the +1 there
+		int16_t s0 = (int16_t)ceil(m_black_x0 * xMult);
+		int16_t t0 = (int16_t)ceil(m_black_y0 * yMult);
+		int16_t s1 = (int16_t)ceil(m_black_x1 * xMult);
+		int16_t t1 = (int16_t)ceil(m_black_y1 * yMult);
+
+		m_vertexBuffer[m_vertexCount+0].set( x0, y0, s0, t0, m_backgroundColor);
+		m_vertexBuffer[m_vertexCount+1].set( x0, y1, s0, t1, m_backgroundColor);
+		m_vertexBuffer[m_vertexCount+2].set( x1, y1, s1, t1, m_backgroundColor);
+		m_vertexBuffer[m_vertexCount+3].set( x1, y0, s1, t0, m_backgroundColor);
+
+		m_indexBuffer[m_indexCount + 0] = m_vertexCount+0;
+		m_indexBuffer[m_indexCount + 1] = m_vertexCount+1;
+		m_indexBuffer[m_indexCount + 2] = m_vertexCount+2;
+		m_indexBuffer[m_indexCount + 3] = m_vertexCount+0;
+		m_indexBuffer[m_indexCount + 4] = m_vertexCount+2;
+		m_indexBuffer[m_indexCount + 5] = m_vertexCount+3;
+		m_vertexCount += 4;
+		m_indexCount += 6;
+
 	}
-	*/
+	
 
 
 	// TODO handle underline
@@ -202,31 +261,17 @@ void TextBuffer::appendGlyph(CodePoint_t codePoint, const FontInfo& font, const 
 	int16_t y0 = (int16_t)( m_penY - (glyphInfo.offset_y));// * font.scale ));
 	int16_t x1 = (int16_t)( x0 + glyphInfo.width );
 	int16_t y1 = (int16_t)( y0 - glyphInfo.height );
-		
-	/*
-	q->x0 = rx;
-	q->y0 = ry;
-	q->x1 = rx + scale * (glyph->x1 - glyph->x0);
-	q->y1 = ry - scale * (glyph->y1 - glyph->y0);
-	*/
-
 
 	float shift = x0_precise - x0;
 	float xMult = 32767.0f / (float) (m_textureWidth);
 	float yMult = 32767.0f / (float) (m_textureHeight);
 
 	//TODO: Understand why I have to add the +1 there
-
-	uint16_t s0 = (float) (glyphInfo.texture_x+1) * xMult;
-	uint16_t t0 = (float) (glyphInfo.texture_y+1) * yMult;
-	uint16_t s1 = (float) (glyphInfo.texture_x+1 + glyphInfo.width) * xMult;
-	uint16_t t1 = (float) (glyphInfo.texture_y+1 + glyphInfo.height) * yMult;
-	/*
-	uint16_t s0 = (32767 * glyphInfo.texture_x) / m_textureWidth;
-	uint16_t t0 = (32767 * glyphInfo.texture_y) / m_textureHeight;
-	uint16_t s1 = (32767 * (glyphInfo.texture_x + glyphInfo.width+1)) / m_textureWidth;
-	uint16_t t1 = (32767 * (glyphInfo.texture_y + glyphInfo.height+1)) / m_textureHeight;
-	*/
+	int16_t s0 = (int16_t)ceil((glyphInfo.texture_x) * xMult);
+	int16_t t0 = (int16_t)ceil((glyphInfo.texture_y) * yMult);
+	int16_t s1 = (int16_t)ceil((glyphInfo.texture_x + glyphInfo.width) * xMult);
+	int16_t t1 = (int16_t)ceil((glyphInfo.texture_y + glyphInfo.height) * yMult);
+	
 	m_vertexBuffer[m_vertexCount+0].set( x0, y0, s0, t0, m_textColor);
 	m_vertexBuffer[m_vertexCount+1].set( x0, y1, s0, t1, m_textColor);
 	m_vertexBuffer[m_vertexCount+2].set( x1, y1, s1, t1, m_textColor);
@@ -240,37 +285,18 @@ void TextBuffer::appendGlyph(CodePoint_t codePoint, const FontInfo& font, const 
 	m_indexBuffer[m_indexCount + 5] = m_vertexCount+3;
 	m_vertexCount += 4;
 	m_indexCount += 6;
+		
+	m_penX += (glyphInfo.advance_x) * font.scale;	
+}
 
-	//vertex_buffer_push_back( buffer, vertices, vcount, indices, icount );
-	m_penX += (glyphInfo.advance_x) * font.scale;
-	/*
-	texture_glyph_t *black = texture_font_get_glyph( font, -1 );
-
-
-	float m_penX;
-	float m_penY;
-
-	float endX = 
-	float endY =
-	uint16_t s0, uint16_t t0, uint16_t s1, uint16_t t1
-	uint32_t rgba = 0x000000FF;
-	float startX = m_penX + glyphInfo.advance_x
-	float startY = m_penY +
-
-	m_vertexBuffer->addQuad(
-
-	m_penX + glyphInfo.advance_x;
-	m_penX + glyphInfo.advance_y;
-
-	Vertex* m_vertexBuffer;
-	uint16_t m_indexBuffer;
-
-        return;
-
-	//compute position
-	//compute u/v coordinates
-	//append textcolor	
-*/
+void TextBuffer::verticalCenterLastLine(int16_t dy)
+{
+	size_t i, j;
+	for( i=m_lineStartIndex; i < m_vertexCount; ++i )
+    {
+		TextVertex& v = m_vertexBuffer[i];
+		v.y -= dy; 
+    }
 }
 
 }

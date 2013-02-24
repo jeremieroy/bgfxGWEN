@@ -1,8 +1,11 @@
 #include "bgfx_font.h"
 #include "FontManager.h"
 #include "TextBufferManager.h"
-#include <assert.h>
 #include <bx/macros.h>
+
+#include <assert.h>
+#include <stdarg.h> // va_list
+#include <alloca.h>
 #include <unordered_map>
 
 namespace bgfx_font
@@ -103,7 +106,7 @@ void bakeAndSaveFont(FontHandle _handle, const char * _fontPath, const char * _f
 	assert(false && "Not implemented yet");
 }
 
-TextBufferHandle createTextBuffer(FontType _type, BufferType bufferType, uint32_t _maxCharacterCount)
+TextBufferHandle createTextBuffer(FontType _type, BufferType bufferType)
 {
 	assert(g_context != NULL && "Context not initialized. Call bgfx_text::init(); ");
 	return g_context->textManager.createTextBuffer(_type,bufferType);
@@ -178,10 +181,26 @@ void appendText(TextBufferHandle _handle, FontHandle fontHandle, const wchar_t *
 	txt->appendText(fontHandle, _string);
 }
 
-void appendTextPrintf(TextBufferHandle _handle, FontHandle fontHandle, const char * format, ...)
+void appendTextPrintf(TextBufferHandle _handle, FontHandle fontHandle, const char * _format, ...)
 {
+	/*
 	assert(g_context != NULL && "Context not initialized. Call bgfx_text::init(); ");
 	assert(false && "Not implemented yet");
+	va_list argList;
+	va_start(argList, _format);
+
+	char* temp = (char*)alloca(m_width);
+	uint32_t num = vsnprintf(temp, m_width, _format, _argList);
+
+	uint8_t* mem = &m_mem[(_y*m_width+_x)*2];
+	for (uint32_t ii = 0, xx = _x; ii < num && xx < m_width; ++ii, ++xx)
+	{
+		mem[0] = temp[ii];
+		mem[1] = _attr;
+		mem += 2;
+	}
+	va_end(argList);
+	*/
 }
 
 void appendTextPrintf(TextBufferHandle _handle, FontHandle fontHandle, const wchar_t * format, ...)

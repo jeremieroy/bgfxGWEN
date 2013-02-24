@@ -49,13 +49,18 @@ TextureAtlasHandle FontManager::createTextureAtlas(TextureType type, uint16_t wi
 	m_atlas[atlasIdx].height = height;
 	m_atlas[atlasIdx].depth = (type == TEXTURE_TYPE_ALPHA)?1:4;
 	
-
 	// Create filler rectangle
 	uint8_t buffer[4*4*4];
 	memset( buffer, 255, 4 * 4 * 4);
 	
 	uint16_t x,y;
 	assert( addBitmap(m_atlas[atlasIdx], 4, 4, buffer, x, y ) );
+		
+	m_atlas[atlasIdx].m_black_x0 = x;
+	m_atlas[atlasIdx].m_black_y0 = y;
+	m_atlas[atlasIdx].m_black_x1 = x+4;
+	m_atlas[atlasIdx].m_black_y1 = y+4;	
+
 	return TextureAtlasHandle(atlasIdx);
 }
 
@@ -73,6 +78,15 @@ void FontManager::getTextureSize(TextureAtlasHandle handle, uint16_t& width, uin
 	assert(atlasIdx != bx::HandleAlloc::invalid);
 	width = m_atlas[atlasIdx].width;
 	height = m_atlas[atlasIdx].height;
+}
+
+void FontManager::getBlackGlyphUV(TextureAtlasHandle handle, int16_t& x0, int16_t& y0, int16_t& x1, int16_t& y1)
+{
+	uint16_t atlasIdx = m_atlasHandles.getHandleAt(handle.idx);
+	x0 = m_atlas[atlasIdx].m_black_x0;
+	y0 = m_atlas[atlasIdx].m_black_y0;
+	x1 = m_atlas[atlasIdx].m_black_x1;
+	y1 = m_atlas[atlasIdx].m_black_y1;
 }
 
 void FontManager::destroyTextureAtlas(TextureAtlasHandle handle)
@@ -332,6 +346,60 @@ bool FontManager::preloadGlyph(FontHandle handle, const wchar_t* _string)
 	return false;
 }
 
+bool FontManager::preloadGlyph(FontHandle handle, CodePoint_t codePoint)
+{
+	assert(handle.isValid());
+	uint16_t fontIdx = m_fontHandles.getHandleAt(handle.idx);
+	assert(fontIdx != bx::HandleAlloc::invalid);
+
+	CachedFont& font = m_cachedFonts[fontIdx];
+	FontInfo& fontInfo = font.fontInfo;
+	TextureAtlas& textureAtlas = m_atlas[fontInfo.textureAtlas.idx];	
+
+	//if truetype present
+	if(font.trueTypeFont != NULL)
+	{
+		GlyphInfo glyphInfo;
+		
+		GlyphHash_t::iterator iter = font.cachedGlyphs.find(codePoint);
+		if(iter != font.cachedGlyphs.end())
+		{
+			return true;
+		}
+
+		// load glyph info
+		if( !font.trueTypeFont->getGlyphInfo(fontInfo, codePoint, glyphInfo) )
+		{
+			return false;
+		}			
+
+		//assert font is not too big
+		assert(glyphInfo.width * glyphInfo.height * textureAtlas.depth < MAX_FONT_BUFFER_SIZE);
+
+		//bake glyph as bitmap to buffer
+		switch(font.fontInfo.fontType)
+		{
+		case FONT_TYPE_ALPHA:
+			font.trueTypeFont->bakeGlyphAlpha(fontInfo, glyphInfo, m_buffer);
+			break;
+		default:
+			assert(false && "TextureType not supported yet");
+		};
+
+		//copy bitmap to texture
+		if(!addBitmap(textureAtlas, glyphInfo.width, glyphInfo.height, m_buffer, glyphInfo.texture_x, glyphInfo.texture_y ) )
+		{
+			return false;
+		}
+
+		// store cached glyph
+		font.cachedGlyphs[codePoint] = glyphInfo;
+		return true;
+	}
+
+	return false;
+}
+
 const FontInfo& FontManager::getFontInfo(FontHandle handle)
 { 
 	assert(handle.isValid());
@@ -349,7 +417,13 @@ bool FontManager::getGlyphInfo(FontHandle fontHandle, CodePoint_t codePoint, Gly
 	GlyphHash_t::iterator iter = m_cachedFonts[fontIdx].cachedGlyphs.find(codePoint);
 	if(iter == m_cachedFonts[fontIdx].cachedGlyphs.end())
 	{
-		return false;
+		if(preloadGlyph(fontHandle, codePoint))
+		{
+			iter = m_cachedFonts[fontIdx].cachedGlyphs.find(codePoint);
+		}else
+		{
+			return false;
+		}
 	}
 	outInfo = iter->second;
 	return true;
