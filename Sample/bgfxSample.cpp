@@ -78,8 +78,8 @@ static const bgfx::Memory* loadTexture(const char* _name)
 
 struct Vertex
 {
-	float x,y;
-	float u,v;
+	uint16_t x,y;
+	uint16_t u,v;
 	float r,g,b,a;
 };
 
@@ -89,13 +89,14 @@ struct Vertex
 */
 
 //1 - 0
-const float TW = 512.0f;
+const uint16_t TW = 512;  //512.0f;
+const uint16_t TM = 32767;//512*50;//65535; //1.0f;
 static Vertex s_quadVertices[4] =
 {
-	{ 0,  TW, 0.0f, 0.0f, 1.0f, 0.0 ,0.0, 1.0f},
-	{ TW, TW, 1.0f, 0.0f, 1.0f, 1.0 ,0.0, 1.0f},
-	{ 0,  0, 0.0f, 1.0f, 1.0f, 0.0 ,1.0, 1.0f},
-	{ TW, 0, 1.0f, 1.0f, 1.0f, 1.0 ,0.0, 1.0f}
+	{  0, TW,  0,  0, 1.0f, 1.0 ,1.0, 1.0f},
+	{ TW, TW, TM,  0, 1.0f, 1.0 ,1.0, 1.0f},
+	{  0,  0,  0, TM, 1.0f, 1.0 ,1.0, 1.0f},
+	{ TW,  0, TM, TM, 1.0f, 1.0 ,1.0, 1.0f}
 };
 
 static uint16_t s_quadVerticesIdx[6] = { 0,2,1, 1,2,3 };
@@ -191,26 +192,27 @@ int _main_(int _argc, char** _argv)
 	bgfx_font::TrueTypeHandle comic_tt = bgfx_font::loadTrueTypeFont("c:/windows/fonts/comic.ttf");
 	bgfx_font::TrueTypeHandle calibri_tt = bgfx_font::loadTrueTypeFont("c:/windows/fonts/calibri.ttf");
 
-	std::vector<bgfx_font::FontHandle> fonts;
-	for(int i = 16; i < 30; i+=2)
+	std::vector<bgfx_font::FontHandle> fonts;	
+	for(int i = 12; i < 36; i+=2)
 	{		
-		bgfx_font::FontHandle font = bgfx_font::getFontByPixelSize(times_tt, i);
-		bgfx_font::preloadGlyph(font, L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");
+		bgfx_font::FontHandle font = bgfx_font::getFontByEmSize(times_tt, i);
+		bgfx_font::preloadGlyph(font, L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ \n");
 		fonts.push_back(font);
-		
+		/*
 		bgfx_font::FontHandle font2 = bgfx_font::getFontByPixelSize(comic_tt, i);
-		bgfx_font::preloadGlyph(font2, L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");	
+		bgfx_font::preloadGlyph(font2, L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ ");	
 		fonts.push_back(font2);
 
 		bgfx_font::FontHandle font3 = bgfx_font::getFontByPixelSize(calibri_tt, i);
-		bgfx_font::preloadGlyph(font3, L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");	
+		bgfx_font::preloadGlyph(font3, L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ ");	
 		fonts.push_back(font3);
+		*/
 	}
 
 	
 	
 	std::vector<uint8_t> buffer;
-	float emSize = 18.0f;
+	//float emSize = 18.0f;
 	//bgfx_font::GlyphInfo glyphInfo;
 	//stash.getGlyphInfo(font, 'a', glyphInfo);
 
@@ -230,8 +232,8 @@ int _main_(int _argc, char** _argv)
 	// Create vertex stream declaration.
 	bgfx::VertexDecl vertexDecl;
 	vertexDecl.begin();
-		vertexDecl.add(bgfx::Attrib::Position, 2, bgfx::AttribType::Float);
-		vertexDecl.add(bgfx::Attrib::TexCoord0, 2, bgfx::AttribType::Float);
+		vertexDecl.add(bgfx::Attrib::Position, 2, bgfx::AttribType::Int16);
+		vertexDecl.add(bgfx::Attrib::TexCoord0, 2, bgfx::AttribType::Int16,true,false);
 		vertexDecl.add(bgfx::Attrib::Color0, 4, bgfx::AttribType::Float);
 	vertexDecl.end();
 	
@@ -267,6 +269,18 @@ int _main_(int _argc, char** _argv)
 	bgfx::destroyVertexShader(vsh);
 	bgfx::destroyFragmentShader(fsh);
 	
+	bgfx_font::TextBufferHandle staticText = bgfx_font::createTextBuffer(bgfx_font::FONT_TYPE_ALPHA, bgfx_font::STATIC, 1024);
+	bgfx_font::setPenPosition(staticText, 520.0f,500.f);
+	
+	for(size_t i = 0; i< fonts.size(); ++i)
+	{		
+		bgfx_font::appendText(staticText, fonts[i], L"The quick brown fox jumps over the lazy dog\n");		
+	}
+	
+
+	bgfx_font::TextBufferHandle staticText2 = bgfx_font::createTextBuffer(bgfx_font::FONT_TYPE_ALPHA, bgfx_font::STATIC, 1024);
+	//bgfx_font::setPenPosition(staticText2, 52.f,52.f);
+	//bgfx_font::appendText(staticText2, fonts[6], L"The quick brown fox jump over the lazy dogs");
 
     //void bakeGlyphAlpha(uint32_t codePoint, float size, uint8_t* outBuffer);
 
@@ -295,9 +309,6 @@ int _main_(int _argc, char** _argv)
 		mtxOrtho(proj, 0,width,0,height,0.1f, 1000.0f);
 		// Set view and projection matrix for view 0.
 		bgfx::setViewTransform(0, view, proj);
-		
-		//float color[4] = { 1.0f, 0.5f,0.5f,1.0f};		
-		//bgfx::setUniform(u_color0, color);
 
 		// Set vertex and fragment shaders.
 		bgfx::setProgram(program);
@@ -318,14 +329,15 @@ int _main_(int _argc, char** _argv)
 		// Submit primitive for rendering to view 0.
 		bgfx::submit(0);
 
+
+		bgfx_font::submitTextBuffer(staticText, 0);
+		//bgfx_font::submitTextBuffer(staticText2, 0);
 		//pCanvas->RenderCanvas();
-
-
+		
         // Advance to next frame. Rendering thread will be kicked to 
 		// process submitted rendering primitives.
 		bgfx::frame();
 	}
-
 
 	bgfx::destroyIndexBuffer(ibh);
 	bgfx::destroyVertexBuffer(vbh);
@@ -343,6 +355,8 @@ int _main_(int _argc, char** _argv)
 	{
 		bgfx_font::destroyFont(fonts[i]);
 	}
+	bgfx_font::destroyTextBuffer(staticText);
+	bgfx_font::destroyTextBuffer(staticText2);
 	bgfx_font::destroyTextureAtlas(atlas);
 	bgfx_font::shutdown();
 	// Shutdown bgfx.

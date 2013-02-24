@@ -38,7 +38,7 @@ TextureAtlasHandle createTextureAtlas(TextureType _type, uint16_t _width, uint16
 
 bgfx::TextureHandle getTextureHandle(TextureAtlasHandle _handle)
 {
-	assert(g_context != NULL && "Context not initialized. Call bgfx_text::init(); ");	
+	assert(g_context != NULL && "Context not initialized. Call bgfx_text::init(); ");
 	return g_context->fontManager.getTextureHandle(_handle);
 }
 

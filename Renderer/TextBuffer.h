@@ -30,12 +30,12 @@ public:
 	void setFontManager(FontManager* fontManager);
 
 	void setStyle(uint32_t flags = STYLE_NORMAL) { m_styleFlags = flags; }
-	void setTextColor(uint32_t rgba = 0x000000FF) { m_textColor = rgba; }
-	void setBackgroundColor(uint32_t rgba = 0x000000FF) { m_backgroundColor = rgba; }
+	void setTextColor(uint32_t rgba = 0x000000FF) { m_textColor = toABGR(rgba); }
+	void setBackgroundColor(uint32_t rgba = 0x000000FF) { m_backgroundColor = toABGR(rgba); }
 
-	void setOverlineColor(uint32_t rgba = 0x000000FF) { m_overlineColor = rgba; }
-	void setUnderlineColor(uint32_t rgba = 0x000000FF) { m_underlineColor = rgba; }
-	void setStrikeThroughColor(uint32_t rgba = 0x000000FF) { m_strikeThroughColor = rgba; }
+	void setOverlineColor(uint32_t rgba = 0x000000FF) { m_overlineColor = toABGR(rgba); }
+	void setUnderlineColor(uint32_t rgba = 0x000000FF) { m_underlineColor = toABGR(rgba); }
+	void setStrikeThroughColor(uint32_t rgba = 0x000000FF) { m_strikeThroughColor = toABGR(rgba); }
 	
 	void setPenPosition(float x, float y) { m_penX = x; m_penY = y; }
 
@@ -64,13 +64,22 @@ public:
 	/// get a pointer to the index buffer to submit it to the graphic
 	const uint16_t* getIndexBuffer(){ return m_indexBuffer; }
 	/// number of index in the index buffer
-	uint32_t getIndexCount(){ return m_vertexCount; }
+	uint32_t getIndexCount(){ return m_indexCount; }
 	/// size in bytes of an index
 	uint32_t getIndexSize(){ return sizeof(uint16_t); }
 
+	bgfx::TextureHandle getTextureHandle() { return m_textureHandle; }
+	void getTextureSize(uint16_t& width, uint16_t& height) { width = m_textureWidth; height = m_textureHeight; }
+
 private:
 	void appendGlyph(CodePoint_t codePoint, const FontInfo& font, const GlyphInfo& glyphInfo);
-
+	uint32_t toABGR(uint32_t rgba) 
+	{ 
+		return (((rgba >> 0) & 0xff) << 24) |  
+			(((rgba >> 8) & 0xff) << 16) |    
+			(((rgba >> 16) & 0xff) << 8) |    
+			(((rgba >> 24) & 0xff) << 0);   
+	}
 	uint32_t m_styleFlags;
 
 	// color states
@@ -87,20 +96,23 @@ private:
 	float m_originX;
 	float m_originY;	
 
-	int16_t m_lineAscender;
-	int16_t m_lineDescender;	
-
+	float m_lineAscender;
+	float m_lineDescender;
+	
 	///
 	FontManager* m_fontManager;
-
-	
+	bgfx::TextureHandle m_textureHandle;
+	uint16_t padding__;
+	uint16_t m_textureWidth;
+	uint16_t m_textureHeight;
+		
 	TextVertex* m_vertexBuffer;
 	uint16_t* m_indexBuffer;
 	
 	size_t m_vertexCount;
 	size_t m_indexCount;
-
 	size_t m_lineStartIndex;
+	
 
 };
 

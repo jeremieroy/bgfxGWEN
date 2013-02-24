@@ -91,7 +91,7 @@ bool TrueTypeFont::getGlyphInfo(const FontInfo& fontInfo, CodePoint_t codePoint,
 	int advanceWidth, leftSideBearing;
 	stbtt_GetGlyphHMetrics(fnt, glyphIndex, &advanceWidth, &leftSideBearing);
 
-	int16_t offset_x = leftSideBearing;
+	int16_t offset_x = x0;
 	int16_t offset_y = y0; // ????
 
 	outGlyphInfo.glyphIndex = glyphIndex;

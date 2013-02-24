@@ -59,7 +59,7 @@ public:
 	
 	/// retrieve a texture resource using the atlas handle
 	bgfx::TextureHandle getTextureHandle(TextureAtlasHandle handle);
-
+	void getTextureSize(TextureAtlasHandle handle, uint16_t& width, uint16_t& height);
 	/// destroy a texture atlas
 	void destroyTextureAtlas(TextureAtlasHandle handle);
 
@@ -135,6 +135,8 @@ private:
 		TextureType type;
 		RectanglePacker rectanglePacker;
 		bgfx::TextureHandle textureHandle;
+		uint16_t width;
+		uint16_t height;
 		uint16_t depth;
 	};	
 	TextureAtlas* m_atlas;

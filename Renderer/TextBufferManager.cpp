@@ -48,11 +48,22 @@ TextBufferManager::~TextBufferManager()
 	assert(m_textBufferHandles.getNumHandles() == 0 && "All the text buffers must be destroyed before destroying the manager");
 	delete[] m_textBuffers;
 
-	bgfx::destroyProgram(m_basicProgram);
+	bgfx::destroyProgram(m_basicProgram);	
+	bgfx::destroyUniform(m_u_texColor);
 }
 
-void TextBufferManager::init(FontManager* m_fontManager, const char* shaderPath)
+void TextBufferManager::init(FontManager* fontManager, const char* shaderPath)
 {
+	m_fontManager = fontManager;
+
+	m_vertexDecl.begin();
+	m_vertexDecl.add(bgfx::Attrib::Position, 2, bgfx::AttribType::Int16);
+	m_vertexDecl.add(bgfx::Attrib::TexCoord0, 2, bgfx::AttribType::Int16,true);
+	m_vertexDecl.add(bgfx::Attrib::Color0, 4, bgfx::AttribType::Uint8);
+	m_vertexDecl.end();
+
+	m_u_texColor = bgfx::createUniform("u_texColor", bgfx::UniformType::Uniform1iv);
+
 	const bgfx::Memory* mem;
 	mem = loadShader(shaderPath, "vs_font_basic");
 	bgfx::VertexShaderHandle vsh = bgfx::createVertexShader(mem);
@@ -126,6 +137,15 @@ void TextBufferManager::submitTextBuffer(TextBufferHandle _handle, uint8_t _id, 
 
 	bgfx::setProgram(m_basicProgram);
 
+	bgfx::setTexture(0, m_u_texColor, bc.textBuffer.getTextureHandle() );
+
+	bgfx::setState( BGFX_STATE_RGB_WRITE
+			|BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_SRC_ALPHA, BGFX_STATE_BLEND_INV_SRC_ALPHA)
+			//|BGFX_STATE_ALPHA_TEST
+			//|BGFX_STATE_DEPTH_WRITE
+			//|BGFX_STATE_DEPTH_TEST_LESS
+			);
+	
 	switch(bc.bufferType)
 	{
 		case STATIC:

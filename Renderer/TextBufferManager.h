@@ -10,10 +10,10 @@ namespace bgfx_font
 class TextBufferManager
 {
 public:
-	TextBufferManager(FontManager* m_fontManager = NULL);
+	TextBufferManager(FontManager* fontManager = NULL);
 	~TextBufferManager();
 	
-	void init(FontManager* m_fontManager, const char* shaderPath);
+	void init(FontManager* fontManager, const char* shaderPath);
 
 	TextBufferHandle createTextBuffer(FontType _type, BufferType bufferType);
 	void destroyTextBuffer(TextBufferHandle handle);
@@ -36,6 +36,7 @@ private:
 	bx::HandleAlloc m_textBufferHandles;
 	FontManager* m_fontManager;
 	bgfx::VertexDecl m_vertexDecl;	
+	bgfx::UniformHandle m_u_texColor;
 	//shaders program
 	bgfx::ProgramHandle m_basicProgram;
 };

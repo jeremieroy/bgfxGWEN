@@ -42,10 +42,13 @@ TextureAtlasHandle FontManager::createTextureAtlas(TextureType type, uint16_t wi
 
 	uint16_t atlasIdx = m_atlasHandles.alloc();
 	assert(atlasIdx != bx::HandleAlloc::invalid);
-	m_atlas[atlasIdx].textureHandle = textureHandle;
-	m_atlas[atlasIdx].rectanglePacker.init(width, height);
-	m_atlas[atlasIdx].depth = (type == TEXTURE_TYPE_ALPHA)?1:4;
 	m_atlas[atlasIdx].type = type;
+	m_atlas[atlasIdx].rectanglePacker.init(width, height);
+	m_atlas[atlasIdx].textureHandle = textureHandle;
+	m_atlas[atlasIdx].width = width;
+	m_atlas[atlasIdx].height = height;
+	m_atlas[atlasIdx].depth = (type == TEXTURE_TYPE_ALPHA)?1:4;
+	
 
 	// Create filler rectangle
 	uint8_t buffer[4*4*4];
@@ -60,9 +63,16 @@ bgfx::TextureHandle FontManager::getTextureHandle(TextureAtlasHandle handle)
 {
 	assert(handle.isValid());
 	uint16_t atlasIdx = m_atlasHandles.getHandleAt(handle.idx);
-	assert(atlasIdx != bx::HandleAlloc::invalid);
-	
+	assert(atlasIdx != bx::HandleAlloc::invalid);	
 	return m_atlas[atlasIdx].textureHandle;
+}
+
+void FontManager::getTextureSize(TextureAtlasHandle handle, uint16_t& width, uint16_t& height)
+{
+	uint16_t atlasIdx = m_atlasHandles.getHandleAt(handle.idx);
+	assert(atlasIdx != bx::HandleAlloc::invalid);
+	width = m_atlas[atlasIdx].width;
+	height = m_atlas[atlasIdx].height;
 }
 
 void FontManager::destroyTextureAtlas(TextureAtlasHandle handle)
@@ -349,7 +359,9 @@ bool FontManager::getGlyphInfo(FontHandle fontHandle, CodePoint_t codePoint, Gly
 
 bgfx::TextureHandle FontManager::createTexture(TextureType textureType, uint16_t width, uint16_t height)
 {
-	//should I allocate memory here ?
+	//Uncomment this to debug atlas
+	//const bgfx::Memory* mem = bgfx::alloc(width*height);
+	//memset(mem->data, 255, mem->size);
 	const bgfx::Memory* mem = NULL;
 	uint32_t flags = BGFX_TEXTURE_MIN_POINT|BGFX_TEXTURE_MAG_POINT|BGFX_TEXTURE_U_CLAMP|BGFX_TEXTURE_V_CLAMP;
 	//uint32_t flags = BGFX_TEXTURE_NONE;
