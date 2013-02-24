@@ -149,8 +149,8 @@ int _main_(int _argc, char** _argv)
 	bgfx_font::init(s_shaderPath);
 
    
-    Gwen::Renderer::bgfxRenderer * pRenderer = new Gwen::Renderer::bgfxRenderer(0,s_shaderPath, "textures/");
-	pRenderer->Init();
+    //Gwen::Renderer::bgfxRenderer * pRenderer = new Gwen::Renderer::bgfxRenderer(0,s_shaderPath, "textures/");
+	//pRenderer->Init();
 
 	//
 	// Create a GWEN skin
@@ -158,30 +158,30 @@ int _main_(int _argc, char** _argv)
 	//Gwen::Skin::TexturedBase* pSkin = new Gwen::Skin::TexturedBase( pRenderer );
 	//pSkin->Init("DefaultSkin.png");
 
-	Gwen::Skin::Simple* pSkin = new Gwen::Skin::Simple();
-	pSkin->SetRender(pRenderer);
+	//Gwen::Skin::Simple* pSkin = new Gwen::Skin::Simple();
+	//pSkin->SetRender(pRenderer);
 	//pSkin->Init("DefaultSkin.png");
 
 	//
 	// Create a Canvas (it's root, on which all other GWEN panels are created)
 	//
-	Gwen::Controls::Canvas* pCanvas = new Gwen::Controls::Canvas( pSkin );
-	pCanvas->SetSize( 998, 650 - 24 );
-	pCanvas->SetDrawBackground( true );
-	pCanvas->SetBackgroundColor( Gwen::Color( 150, 170, 170, 255 ) );
+	//Gwen::Controls::Canvas* pCanvas = new Gwen::Controls::Canvas( pSkin );
+	//pCanvas->SetSize( 998, 650 - 24 );
+	//pCanvas->SetDrawBackground( true );
+	//pCanvas->SetBackgroundColor( Gwen::Color( 150, 170, 170, 255 ) );
 
 	//
 	// Create our unittest control (which is a Window with controls in it)
 	//
-	UnitTest* pUnit = new UnitTest( pCanvas );
-	pUnit->SetPos( 10, 10 );
+	//UnitTest* pUnit = new UnitTest( pCanvas );
+	//pUnit->SetPos( 10, 10 );
 
 	//
 	// Create a Windows Control helper 
 	// (Processes Windows MSG's and fires input at GWEN)
 	//
-	Gwen::Input::Windows GwenInput;
-	GwenInput.Initialize( pCanvas );
+	//Gwen::Input::Windows GwenInput;
+	//GwenInput.Initialize( pCanvas );
     
 	//bgfx_font::TrueTypeFont* font = new  bgfx_font::TrueTypeFont();
     //font->loadFont("c:/windows/fonts/times.ttf");
@@ -189,46 +189,21 @@ int _main_(int _argc, char** _argv)
 	bgfx_font::TextureAtlasHandle atlas = bgfx_font::createTextureAtlas(bgfx_font::TEXTURE_TYPE_ALPHA, 512,512);
  	
 	bgfx_font::TrueTypeHandle times_tt = bgfx_font::loadTrueTypeFont("c:/windows/fonts/times.ttf");
-	bgfx_font::TrueTypeHandle comic_tt = bgfx_font::loadTrueTypeFont("c:/windows/fonts/comic.ttf");
-	bgfx_font::TrueTypeHandle calibri_tt = bgfx_font::loadTrueTypeFont("c:/windows/fonts/calibri.ttf");
+	//bgfx_font::TrueTypeHandle comic_tt = bgfx_font::loadTrueTypeFont("c:/windows/fonts/comic.ttf");
+	//bgfx_font::TrueTypeHandle calibri_tt = bgfx_font::loadTrueTypeFont("c:/windows/fonts/calibri.ttf");
 
-	std::vector<bgfx_font::FontHandle> fonts;	
+	std::vector<bgfx_font::FontHandle> fonts;
 	for(int i = 12; i < 36; i+=2)
 	{		
-		bgfx_font::FontHandle font = bgfx_font::getFontByEmSize(times_tt, i);
+		bgfx_font::FontHandle font = bgfx_font::createFontByEmSize(times_tt, i);
 		bgfx_font::preloadGlyph(font, L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ \n");
 		fonts.push_back(font);
-		/*
-		bgfx_font::FontHandle font2 = bgfx_font::getFontByPixelSize(comic_tt, i);
-		bgfx_font::preloadGlyph(font2, L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ ");	
-		fonts.push_back(font2);
-
-		bgfx_font::FontHandle font3 = bgfx_font::getFontByPixelSize(calibri_tt, i);
-		bgfx_font::preloadGlyph(font3, L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ ");	
-		fonts.push_back(font3);
-		*/
+		
+		//bgfx_font::FontHandle font = bgfx_font::getFontByPixelSize(comic_tt, i);
+		//bgfx_font::preloadGlyph(font, L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ ");	
+		//fonts.push_back(font);
 	}
 
-	
-	
-	std::vector<uint8_t> buffer;
-	//float emSize = 18.0f;
-	//bgfx_font::GlyphInfo glyphInfo;
-	//stash.getGlyphInfo(font, 'a', glyphInfo);
-
-/*
-    bgfx_font::Rect16 rect = stash.allocateRegion(glyphSize.width, glyphSize.height);
-	buffer.resize(glyphSize.width*glyphSize.height);
-    font->bakeGlyphAlpha('a', emSize, &buffer[0]);
-	stash.updateRegion(rect, &buffer[0]);
-
-	glyphSize = font->getGlyphSize('M', 192.0f);
-    rect = stash.allocateRegion(glyphSize.width, glyphSize.height);
-	buffer.resize(glyphSize.width*glyphSize.height);
-    font->bakeGlyphAlpha('M', 192.0f, &buffer[0]);
-	stash.updateRegion(rect, &buffer[0]);
-	*/
-	
 	// Create vertex stream declaration.
 	bgfx::VertexDecl vertexDecl;
 	vertexDecl.begin();
@@ -348,8 +323,8 @@ int _main_(int _argc, char** _argv)
 
 
 	bgfx_font::unloadTrueTypeFont(times_tt);
-	bgfx_font::unloadTrueTypeFont(comic_tt);
-	bgfx_font::unloadTrueTypeFont(calibri_tt);
+	//bgfx_font::unloadTrueTypeFont(comic_tt);
+	//bgfx_font::unloadTrueTypeFont(calibri_tt);
 
 	for(size_t i=0; i<fonts.size();++i)
 	{

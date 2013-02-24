@@ -48,8 +48,9 @@ TextBufferManager::~TextBufferManager()
 	assert(m_textBufferHandles.getNumHandles() == 0 && "All the text buffers must be destroyed before destroying the manager");
 	delete[] m_textBuffers;
 
-	bgfx::destroyProgram(m_basicProgram);	
 	bgfx::destroyUniform(m_u_texColor);
+	bgfx::destroyProgram(m_basicProgram);	
+	
 }
 
 void TextBufferManager::init(FontManager* fontManager, const char* shaderPath)

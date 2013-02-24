@@ -5,33 +5,31 @@ namespace bgfx_font
 {	
 	const uint16_t INVALID_HANDLE_ID = UINT16_MAX;
 	#define BGFX_FONT_HANDLE(_name) struct _name { uint16_t idx; explicit _name(uint16_t _idx = INVALID_HANDLE_ID):idx(_idx){} bool isValid(){return idx != INVALID_HANDLE_ID;} }
+	// @ note to myself
+	// would be better if I didn't got into troubles with Initializer lists :  if (handle != { UINT16_MAX }) ...
 
 	BGFX_FONT_HANDLE(TrueTypeHandle);
 	BGFX_FONT_HANDLE(FontHandle);
 	BGFX_FONT_HANDLE(TextureAtlasHandle);
 	BGFX_FONT_HANDLE(TextBufferHandle);	
-
-	// @ note to myself
-	// would be better if I could make Initializer lists to greater adoption :  if (handle != { UINT16_MAX }) ...
-	
+		
 	/// Type of texture supported for text
 	enum TextureType
 	{
 		TEXTURE_TYPE_ALPHA = 1, // L8
 		TEXTURE_TYPE_RGBA = 1<<1   // BGRA8
 	};
+
 	/// Type of rendering used for the font (determine texture format and shader type)
 	/// @remark Encode texture compatibility on the low bits
 	enum FontType
 	{
 		FONT_TYPE_ALPHA    = 0x00000100 | TEXTURE_TYPE_ALPHA, // L8
-		FONT_TYPE_HINTED   = 0x00000200 | TEXTURE_TYPE_RGBA, // BGRA8
-		FONT_TYPE_RGBA     = 0x00000300 | TEXTURE_TYPE_RGBA, // BGRA8
-		FONT_TYPE_DISTANCE = 0x00000400 | TEXTURE_TYPE_ALPHA // BGRA8
+		FONT_TYPE_HINTED   = 0x00000200 | TEXTURE_TYPE_RGBA,  // BGRA8
+		FONT_TYPE_RGBA     = 0x00000300 | TEXTURE_TYPE_RGBA,  // BGRA8
+		FONT_TYPE_DISTANCE = 0x00000400 | TEXTURE_TYPE_ALPHA  // L8
 	};
-
 	
-
 	/// type of vertex and index buffer to use with a TextBuffer
 	enum BufferType
 	{
@@ -61,7 +59,7 @@ namespace bgfx_font
 		/// Rendering type used for the font
 		int16_t fontType;
 
-		/// Id of the texture atlas in which this glyph is stored
+		/// Id of the texture atlas in which the glyph's bitmap are stored
 		TextureAtlasHandle textureAtlas;
 		int16_t _padding_;
 
@@ -103,14 +101,9 @@ namespace bgfx_font
 	/// Unicode value of a character
 	typedef int32_t CodePoint_t;
 
-	/// A structure that describe a glyph.
-	/// TODO handle kerning
+	/// A structure that describe a glyph.	
 	struct GlyphInfo
-	{	
-		/*GlyphInfo(const GlyphInfo& rhs)
-		{
-			glyphIndex = rhs.glyphIndex;
-		}*/
+	{			
 		/// Index for faster retrieval
 		int32_t glyphIndex;
 	
@@ -120,10 +113,10 @@ namespace bgfx_font
 		/// Glyph's height in pixels.
 		uint16_t height;
 	
-		/// Glyph's left offset in unscaled pixels
+		/// Glyph's left offset in pixels
 		int16_t offset_x;
 
-		/// Glyph's top offset in unscaled pixels
+		/// Glyph's top offset in pixels
 		/// Remember that this is the distance from the baseline to the top-most
 		/// glyph scan line, upwards y coordinates being positive.
 		int16_t offset_y;
@@ -142,15 +135,7 @@ namespace bgfx_font
 		/// texture coordinates if glyph is in a texture alias
 		uint16_t texture_y;
 		
-		/*
-		/// A vector of kerning pairs relative to this glyph.
-		vector_t * kerning;
-
-		/// Glyph outline type (0 = None, 1 = line, 2 = inner, 3 = outer)
-		int outline_type;	    
-		/// Glyph outline thickness
-		float outline_thickness;
-		*/
+		/// TODO handle kerning		
 	};
 	
 	
