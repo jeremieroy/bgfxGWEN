@@ -2,6 +2,7 @@
 #include "FontManager.h"
 #include "utf8_helper.h"
 #include <assert.h>
+#include <math.h>
 
 namespace bgfx_font
 {
@@ -294,9 +295,8 @@ void TextBuffer::appendGlyph(CodePoint_t codePoint, const FontInfo& font, const 
 }
 
 void TextBuffer::verticalCenterLastLine(int16_t dy)
-{
-	size_t i, j;
-	for( i=m_lineStartIndex; i < m_vertexCount; ++i )
+{	
+	for( size_t i=m_lineStartIndex; i < m_vertexCount; ++i )
     {
 		TextVertex& v = m_vertexBuffer[i];
 		v.y -= dy; 
