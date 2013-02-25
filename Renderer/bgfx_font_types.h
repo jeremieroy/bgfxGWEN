@@ -50,18 +50,18 @@ namespace bgfx_font
 	
 	struct FontInfo
 	{		
-		/// The unscaled coordinate above the baseline the font extends (typically positive)
+		/// The pixel extents above the baseline in pixels (typically positive)
 		int16_t ascender;
-		/// The unscaled coordinate below the baseline the font extends (typically negative)
+		/// The extents below the baseline in pixels (typically negative)
 		int16_t descender;
-		/// The unscaled spacing between one row's descent and the next row's ascent
+		/// The spacing in pixels between one row's descent and the next row's ascent
 		int16_t lineGap;
+		/// The thickness of the under/hover/striketrough line in pixels
+		int16_t underline_thickness;
 		/// Rendering type used for the font
 		int16_t fontType;
-
 		/// Id of the texture atlas in which the glyph's bitmap are stored
-		TextureAtlasHandle textureAtlas;
-		int16_t _padding_;
+		TextureAtlasHandle textureAtlas;		
 
 		/// scale to apply to unscaled coordinates
 		float scale;	

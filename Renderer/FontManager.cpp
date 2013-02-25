@@ -437,9 +437,7 @@ bgfx::TextureHandle FontManager::createTexture(TextureType textureType, uint16_t
 	//const bgfx::Memory* mem = bgfx::alloc(width*height);
 	//memset(mem->data, 255, mem->size);
 	const bgfx::Memory* mem = NULL;
-	uint32_t flags = BGFX_TEXTURE_MIN_POINT|BGFX_TEXTURE_MAG_POINT|BGFX_TEXTURE_U_CLAMP|BGFX_TEXTURE_V_CLAMP;
-	//uint32_t flags = BGFX_TEXTURE_NONE;
-
+	uint32_t flags = BGFX_TEXTURE_MIN_POINT|BGFX_TEXTURE_MAG_POINT| BGFX_TEXTURE_MIP_POINT|BGFX_TEXTURE_U_CLAMP|BGFX_TEXTURE_V_CLAMP;
 	bgfx::TextureHandle handle;
 	switch(textureType)
 	{

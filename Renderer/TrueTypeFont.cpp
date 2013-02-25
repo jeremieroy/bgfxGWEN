@@ -4,6 +4,7 @@
 #include "stb_truetype.h"
 
 #include <assert.h>
+#include <math.h>
 
 namespace bgfx_font
 {
@@ -46,9 +47,10 @@ FontInfo TrueTypeFont::getFontInfoByEmSize(float emSize)
 	
 	FontInfo outFontInfo;
 	outFontInfo.scale = scale;
-	outFontInfo.ascender = ascent;
-	outFontInfo.descender = descent;
-	outFontInfo.lineGap = lineGap;
+	outFontInfo.ascender = ceil(ascent*scale);
+	outFontInfo.descender = floor(descent*scale);
+	outFontInfo.lineGap = (lineGap*scale);
+	outFontInfo.underline_thickness = (int16_t) ceil((float)(outFontInfo.ascender-outFontInfo.descender) *0.1f );
 	return outFontInfo;
 }
 
@@ -61,12 +63,15 @@ FontInfo TrueTypeFont::getFontInfoByPixelSize(float pixelSize )
 	stbtt_GetFontVMetrics(fnt, &ascent, &descent, &lineGap);
 
 	float scale = stbtt_ScaleForPixelHeight(fnt, pixelSize);	
+	//Because of hinting, simply scaling the font ascent or descent might not give correct results. A possible solution is to keep the ceiling of the scaled ascent, and floor of the scaled descent.
+	//TODO: check this
 	
 	FontInfo outFontInfo;
 	outFontInfo.scale = scale;
-	outFontInfo.ascender = ascent;
-	outFontInfo.descender = descent;
-	outFontInfo.lineGap = lineGap;
+	outFontInfo.ascender = ceil(ascent*scale);
+	outFontInfo.descender = floor(descent*scale);
+	outFontInfo.lineGap = ceil(lineGap*scale);
+	outFontInfo.underline_thickness = (int16_t) ceil((float)(outFontInfo.ascender-outFontInfo.descender) *0.1f );
 	return outFontInfo;
 }
 
@@ -99,9 +104,7 @@ bool TrueTypeFont::getGlyphInfo(const FontInfo& fontInfo, CodePoint_t codePoint,
 	outGlyphInfo.height = y1-y0;
 	outGlyphInfo.offset_x = offset_x;
 	outGlyphInfo.offset_y = offset_y;
-	outGlyphInfo.advance_x = advanceWidth;
-	//Because of hinting, simply scaling the font ascent or descent might not give correct results. A possible solution is to keep the ceiling of the scaled ascent, and floor of the scaled descent.
-	//TODO: check this
+	outGlyphInfo.advance_x = advanceWidth;	
 	outGlyphInfo.advance_y = (fontInfo.ascender - fontInfo.descender + fontInfo.lineGap);
 	outGlyphInfo.texture_x = 0;
 	outGlyphInfo.texture_y = 0;

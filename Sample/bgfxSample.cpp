@@ -160,7 +160,7 @@ int _main_(int _argc, char** _argv)
 	for(int i = 12; i < 36; i+=2)
 	{		
 		//instantiate a usable font
-		bgfx_font::FontHandle font = bgfx_font::createFontByEmSize(times_tt, i);
+		bgfx_font::FontHandle font = bgfx_font::createFontByPixelSize(times_tt, i);
 		//preload glyph and generate (generate bitmap's)
 		bgfx_font::preloadGlyph(font, L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ. \n");
 
@@ -215,9 +215,9 @@ int _main_(int _argc, char** _argv)
 	bgfx::destroyFragmentShader(fsh);
 	
 	bgfx_font::TextBufferHandle staticText = bgfx_font::createTextBuffer(bgfx_font::FONT_TYPE_ALPHA, bgfx_font::STATIC);
-	bgfx_font::setPenPosition(staticText, 540.0f,600.f);
+	bgfx_font::setPenPosition(staticText, 50.0f,600.f);
 	bgfx_font::setTextStyle(staticText, bgfx_font::STYLE_BACKGROUND);
-	bgfx_font::setTextBackgroundColor(staticText, 0x110505FF);
+	bgfx_font::setTextBackgroundColor(staticText, 0xFF000011);
 	
 	for(size_t i = 0; i< fonts.size(); ++i)
 	{		
@@ -266,6 +266,7 @@ int _main_(int _argc, char** _argv)
 		// Set view and projection matrix for view 0.
 		bgfx::setViewTransform(0, view, proj);
 
+		/*
 		// Set vertex and fragment shaders.
 		bgfx::setProgram(program);
 
@@ -284,7 +285,7 @@ int _main_(int _argc, char** _argv)
 
 		// Submit primitive for rendering to view 0.
 		bgfx::submit(0);
-
+		*/
 		
 		bgfx_font::submitTextBuffer(staticText, 0);	
 		

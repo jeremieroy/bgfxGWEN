@@ -63,7 +63,7 @@ public:
 
 private:
 	void appendGlyph(CodePoint_t codePoint, const FontInfo& font, const GlyphInfo& glyphInfo);
-	void verticalCenterLastLine(int16_t dy);
+	void verticalCenterLastLine(int16_t txtDecalY, uint16_t top, uint16_t bottom);
 	uint32_t toABGR(uint32_t rgba) 
 	{ 
 		return (((rgba >> 0) & 0xff) << 24) |  
@@ -82,14 +82,14 @@ private:
 
 	//position states	
 	float m_penX;
-	float m_penY;
+	int16_t m_penY;
 
 	float m_originX;
 	float m_originY;	
 
-	float m_lineAscender;
-	float m_lineDescender;
-	float m_lineGap;
+	int16_t m_lineAscender;
+	int16_t m_lineDescender;
+	int16_t m_lineGap;
 	
 	///
 	FontManager* m_fontManager;
@@ -103,15 +103,18 @@ private:
 	int16_t m_black_y1;
 
 
-	
-	struct TextVertex
+	void setVertex(size_t i, int16_t _x, int16_t _y, int16_t _u, int16_t _v, uint32_t _rgba, uint8_t style = STYLE_NORMAL)
 	{
-		void set(int16_t _x, int16_t _y, int16_t _u, int16_t _v, uint32_t _rgba)
-		{
-			x = _x; y = _y; 
-			u = _u; v = _v;
-			rgba = _rgba;
-		}
+		m_vertexBuffer[i].x=_x;
+		m_vertexBuffer[i].y=_y;
+		m_vertexBuffer[i].u=_u;
+		m_vertexBuffer[i].v=_v;
+		m_vertexBuffer[i].rgba=_rgba;
+		m_styleBuffer[i] = style;
+	}
+
+	struct TextVertex
+	{		
 		int16_t x,y;
 		int16_t u,v;
 		uint32_t rgba;
@@ -119,6 +122,7 @@ private:
 
 	TextVertex* m_vertexBuffer;
 	uint16_t* m_indexBuffer;
+	uint8_t* m_styleBuffer;
 	
 	size_t m_vertexCount;
 	size_t m_indexCount;
