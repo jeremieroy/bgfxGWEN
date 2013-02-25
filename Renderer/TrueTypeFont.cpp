@@ -91,8 +91,8 @@ bool TrueTypeFont::getGlyphInfo(const FontInfo& fontInfo, CodePoint_t codePoint,
 	int advanceWidth, leftSideBearing;
 	stbtt_GetGlyphHMetrics(fnt, glyphIndex, &advanceWidth, &leftSideBearing);
 
-	int16_t offset_x = x0;
-	int16_t offset_y = y0; // ????
+	int16_t offset_x = leftSideBearing * fontInfo.scale;
+	int16_t offset_y = y0;
 
 	outGlyphInfo.glyphIndex = glyphIndex;
 	outGlyphInfo.width = x1-x0;
@@ -100,6 +100,8 @@ bool TrueTypeFont::getGlyphInfo(const FontInfo& fontInfo, CodePoint_t codePoint,
 	outGlyphInfo.offset_x = offset_x;
 	outGlyphInfo.offset_y = offset_y;
 	outGlyphInfo.advance_x = advanceWidth;
+	//Because of hinting, simply scaling the font ascent or descent might not give correct results. A possible solution is to keep the ceiling of the scaled ascent, and floor of the scaled descent.
+	//TODO: check this
 	outGlyphInfo.advance_y = (fontInfo.ascender - fontInfo.descender + fontInfo.lineGap);
 	outGlyphInfo.texture_x = 0;
 	outGlyphInfo.texture_y = 0;

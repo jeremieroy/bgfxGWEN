@@ -89,6 +89,7 @@ private:
 
 	float m_lineAscender;
 	float m_lineDescender;
+	float m_lineGap;
 	
 	///
 	FontManager* m_fontManager;

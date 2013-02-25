@@ -24,6 +24,7 @@ TextBuffer::TextBuffer()
 	m_originY = 0;
 	m_lineAscender = 0;
 	m_lineDescender = 0;
+	m_lineGap = 0;
 	m_fontManager = NULL;
 	m_textureHandle.idx = bgfx::invalidHandle;
 
@@ -123,6 +124,7 @@ void TextBuffer::appendText(FontHandle fontHandle, const wchar_t * _string)
 		m_originY = m_penY;
 		m_lineDescender = 0;// font.descender;
 		m_lineAscender = 0;//font.ascender;
+		m_lineGap = 0;
 	}
 
 	//parse string
@@ -171,7 +173,7 @@ void TextBuffer::appendGlyph(CodePoint_t codePoint, const FontInfo& font, const 
 	if(codePoint == L'\n' )
     {
         m_penX = m_originX;
-        m_penY += m_lineDescender;
+        m_penY -= m_lineAscender + m_lineDescender + m_lineGap;
 		m_lineDescender = 0;// font.descender * font.scale;
 		m_lineAscender = 0;//font.ascender* font.scale;
         m_lineStartIndex = m_vertexCount;
@@ -184,11 +186,13 @@ void TextBuffer::appendGlyph(CodePoint_t codePoint, const FontInfo& font, const 
         m_penY -= ((font.ascender  * font.scale) - m_lineAscender);
 		verticalCenterLastLine((int16_t) ceil((y-m_penY)));		
         m_lineAscender = (font.ascender * font.scale);
+		m_lineGap = font.lineGap * font.scale;
     }
 
     if( font.descender * font.scale < m_lineDescender )
     {
         m_lineDescender = font.descender * font.scale;
+		m_lineGap = font.lineGap * font.scale;
     }
 			
 	//handle kerning
@@ -203,13 +207,13 @@ void TextBuffer::appendGlyph(CodePoint_t codePoint, const FontInfo& font, const 
 	
 	// TODO handle background
 	// if background not invisible
-	if(m_styleFlags & STYLE_BACKGROUND &&  m_backgroundColor & 0x000000FF)
+	if(false && m_styleFlags & STYLE_BACKGROUND &&  m_backgroundColor & 0x000000FF)
 	{
 		int16_t x0 = ceil( m_penX - kerning );
-		int16_t y0 = ceil( m_penY  + m_lineDescender - font.lineGap * font.scale);//+ font.descender* font.scale);
+		int16_t y0 = ceil( m_penY  + m_lineAscender);// m_lineDescender);//+ font.descender* font.scale);
 
 		int16_t x1 = (int16_t)ceil( (float)x0 + (glyphInfo.advance_x) * font.scale);
-		int16_t y1 = (int16_t)ceil( y0 + m_lineDescender - m_lineAscender);// (font.ascender - font.descender  - font.lineGap ) * font.scale );
+		int16_t y1 = (int16_t)ceil( m_penY +m_lineDescender );// (font.ascender - font.descender  - font.lineGap ) * font.scale );
 		
 		/*
 		float x0_precise = m_penX + (glyphInfo.offset_x);// * font.scale);
