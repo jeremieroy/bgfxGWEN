@@ -160,10 +160,10 @@ int _main_(int _argc, char** _argv)
 	for(int i = 12; i < 36; i+=2)
 	{		
 		//instantiate a usable font
+		//bgfx_font::FontHandle font = bgfx_font::createFontByEmSize(times_tt, i);
 		bgfx_font::FontHandle font = bgfx_font::createFontByPixelSize(times_tt, i);
 		//preload glyph and generate (generate bitmap's)
 		bgfx_font::preloadGlyph(font, L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ. \n");
-
 		fonts.push_back(font);
 	}
 
@@ -215,12 +215,20 @@ int _main_(int _argc, char** _argv)
 	bgfx::destroyFragmentShader(fsh);
 	
 	bgfx_font::TextBufferHandle staticText = bgfx_font::createTextBuffer(bgfx_font::FONT_TYPE_ALPHA, bgfx_font::STATIC);
-	bgfx_font::setPenPosition(staticText, 50.0f,600.f);
-	bgfx_font::setTextStyle(staticText, bgfx_font::STYLE_BACKGROUND);
-	bgfx_font::setTextBackgroundColor(staticText, 0xFF000011);
 	
+	//the pen position represent the top left of the box of the first line of text
+	bgfx_font::setPenPosition(staticText, 10.0f,10.0f);
+	bgfx_font::setTextBackgroundColor(staticText, 0xE0A7B255);
 	for(size_t i = 0; i< fonts.size(); ++i)
-	{		
+	{	
+		if(i&1)
+		{
+			bgfx_font::setTextStyle(staticText, bgfx_font::STYLE_BACKGROUND);			
+		}else
+		{
+			bgfx_font::setTextStyle(staticText, bgfx_font::STYLE_NORMAL);
+		}
+
 		//test vertical alignment
 		//bgfx_font::appendText(staticText, fonts[i], L"AgThJkmlj");
 		bgfx_font::appendText(staticText, fonts[i], L"The quick brown fox jumps over the lazy dog\n");
@@ -250,9 +258,9 @@ int _main_(int _argc, char** _argv)
 
 		// Use debug font to print information about this example.
 		bgfx::dbgTextClear();
-		bgfx::dbgTextPrintf(0, 1, 0x4f, "bgfx/examples/00-helloworld");
-		bgfx::dbgTextPrintf(0, 2, 0x6f, "Description: Initialization and debug text.");
-		bgfx::dbgTextPrintf(0, 3, 0x0f, "Frame: % 7.3f[ms]", double(frameTime)*toMs);
+		//bgfx::dbgTextPrintf(0, 1, 0x4f, "bgfx/examples/00-helloworld");
+		//bgfx::dbgTextPrintf(0, 2, 0x6f, "Description: Initialization and debug text.");
+		//bgfx::dbgTextPrintf(0, 3, 0x0f, "Frame: % 7.3f[ms]", double(frameTime)*toMs);
 
 		
 		float at[3] = { -10.0f, -10.0f, 0.0f };
@@ -261,8 +269,8 @@ int _main_(int _argc, char** _argv)
 		float view[16];
 		float proj[16];
 		mtxLookAt(view, eye, at);
-		//mtxProj(proj, 60.0f, 16.0f/9.0f, 0.1f, 1000.0f);
-		mtxOrtho(proj, 0,width,0,height,0.1f, 1000.0f);
+		//mtxProj(proj, 60.0f, 16.0f/9.0f, 0.1f, 1000.0f);		
+		mtxOrtho(proj, 0,width,height, 0,-1.0f, 1.0f);
 		// Set view and projection matrix for view 0.
 		bgfx::setViewTransform(0, view, proj);
 
@@ -299,9 +307,7 @@ int _main_(int _argc, char** _argv)
 
 		bgfx_font::setTextColor(transientText, rgba);
 		bgfx_font::appendText(transientText, calibriFont, "SubPixel rendering is in my todo list.");
-
-
-		bgfx_font::submitTextBuffer(transientText, 0);
+		::bgfx_font::submitTextBuffer(transientText, 0);
 		
 
         // Advance to next frame. Rendering thread will be kicked to 

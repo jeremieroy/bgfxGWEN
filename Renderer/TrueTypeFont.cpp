@@ -106,9 +106,10 @@ bool TrueTypeFont::getGlyphInfo(const FontInfo& fontInfo, CodePoint_t codePoint,
 	outGlyphInfo.offset_y = offset_y;
 	outGlyphInfo.advance_x = advanceWidth;	
 	outGlyphInfo.advance_y = (fontInfo.ascender - fontInfo.descender + fontInfo.lineGap);
-	outGlyphInfo.texture_x = 0;
-	outGlyphInfo.texture_y = 0;
-
+	outGlyphInfo.texture_x0 = 0;
+	outGlyphInfo.texture_y0 = 0;
+	outGlyphInfo.texture_x1 = 0;
+	outGlyphInfo.texture_y1 = 0;	
 	return true;
 }
 

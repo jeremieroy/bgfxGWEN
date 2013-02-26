@@ -155,7 +155,7 @@ private:
 
 	bgfx::TextureHandle createTexture(TextureType textureType, uint16_t width, uint16_t height);
 	void destroyTexture(bgfx::TextureHandle textureHandle);
-	bool addBitmap(TextureAtlas& atlas, uint16_t width, uint16_t height, const uint8_t* data, uint16_t& x, uint16_t& y);
+	bool addBitmap(TextureAtlas& atlas, GlyphInfo& glyphInfo, const uint8_t* data);	
 
 	//temporary buffer to raster glyph
 	uint8_t* m_buffer;

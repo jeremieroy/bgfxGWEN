@@ -175,7 +175,8 @@ void TextBuffer::appendGlyph(CodePoint_t codePoint, const FontInfo& font, const 
 	if(codePoint == L'\n' )
     {
         m_penX = m_originX;
-        m_penY -= - m_lineDescender + m_lineGap;
+        m_penY -= m_lineDescender;
+		m_penY += m_lineGap;
 		m_lineDescender = 0;
 		m_lineAscender = 0;
         m_lineStartIndex = m_vertexCount;
@@ -195,8 +196,8 @@ void TextBuffer::appendGlyph(CodePoint_t codePoint, const FontInfo& font, const 
 		m_lineGap = font.lineGap;		
 		
 		int16_t y = m_penY;
-		m_penY -= txtDecals;
-		verticalCenterLastLine(txtDecals, m_penY  + m_lineAscender, m_penY + m_lineDescender-m_lineGap);		
+		m_penY += txtDecals;
+		verticalCenterLastLine(txtDecals, m_penY - m_lineAscender, m_penY - m_lineDescender+m_lineGap);		
     }
 			
 	//handle kerning
@@ -209,22 +210,18 @@ void TextBuffer::appendGlyph(CodePoint_t codePoint, const FontInfo& font, const 
 	*/
     m_penX += kerning;
 	
-	float texMultX = 32767.0f / (float) (m_textureWidth);
-	float texMultY = 32767.0f / (float) (m_textureHeight);
-
 	if( m_styleFlags & STYLE_BACKGROUND && m_backgroundColor & 0xFF000000)
 	{
 		int16_t x0 = ceil( m_penX - kerning );
-		int16_t y0 = ( m_penY  + m_lineAscender);
+		int16_t y0 = ( m_penY  - m_lineAscender);
 		int16_t x1 = (int16_t)ceil( (float)x0 + (glyphInfo.advance_x) * font.scale);
-		int16_t y1 = (int16_t)( m_penY + m_lineDescender -m_lineGap );
-				
-		// pbly something better than the ceil		
-		int16_t s0 = (int16_t)ceil(m_black_x0 * texMultX);
-		int16_t t0 = (int16_t)ceil(m_black_y0 * texMultY);
-		int16_t s1 = (int16_t)ceil(m_black_x1 * texMultX);
-		int16_t t1 = (int16_t)ceil(m_black_y1 * texMultY);
-				
+		int16_t y1 = (int16_t)( m_penY - m_lineDescender + m_lineGap );
+
+		int16_t s0 = m_black_x0;
+		int16_t t0 = m_black_y0;
+		int16_t s1 = m_black_x1;
+		int16_t t1 = m_black_y1;
+
 		setVertex(m_vertexCount+0, x0, y0, s0, t0, m_backgroundColor,STYLE_BACKGROUND);
 		setVertex(m_vertexCount+1, x0, y1, s0, t1, m_backgroundColor,STYLE_BACKGROUND);
 		setVertex(m_vertexCount+2, x1, y1, s1, t1, m_backgroundColor,STYLE_BACKGROUND);
@@ -241,7 +238,7 @@ void TextBuffer::appendGlyph(CodePoint_t codePoint, const FontInfo& font, const 
 	}
 
 	// TODO handle underline
-
+	
 	// TODO handle overline
 
 	// TODO handle strikethrough
@@ -250,16 +247,16 @@ void TextBuffer::appendGlyph(CodePoint_t codePoint, const FontInfo& font, const 
 	//handle glyph
 	float x0_precise = m_penX + (glyphInfo.offset_x);// * font.scale);
 	int16_t x0 = (int16_t)( x0_precise);
-	int16_t y0 = (int16_t)( m_penY - (glyphInfo.offset_y));// * font.scale ));
+	int16_t y0 = (int16_t)( m_penY + (glyphInfo.offset_y));// * font.scale ));
 	int16_t x1 = (int16_t)( x0 + glyphInfo.width );
-	int16_t y1 = (int16_t)( y0 - glyphInfo.height );
+	int16_t y1 = (int16_t)( y0 + glyphInfo.height );
 
 	float shift = x0_precise - x0;
 	
-	int16_t s0 = (int16_t)ceil((glyphInfo.texture_x) * texMultX);
-	int16_t t0 = (int16_t)ceil((glyphInfo.texture_y) * texMultY);
-	int16_t s1 = (int16_t)ceil((glyphInfo.texture_x + glyphInfo.width) * texMultX);
-	int16_t t1 = (int16_t)ceil((glyphInfo.texture_y + glyphInfo.height) * texMultY);
+	int16_t s0 = glyphInfo.texture_x0;
+	int16_t t0 = glyphInfo.texture_y0;
+	int16_t s1 = glyphInfo.texture_x1;
+	int16_t t1 = glyphInfo.texture_y1;
 	
 	setVertex(m_vertexCount+0, x0, y0, s0, t0, m_textColor);
 	setVertex(m_vertexCount+1, x0, y1, s0, t1, m_textColor);
@@ -290,10 +287,10 @@ void TextBuffer::verticalCenterLastLine(int16_t dy, uint16_t top, uint16_t botto
 			m_vertexBuffer[i+2].y = bottom;
 			m_vertexBuffer[i+3].y = top;
 		}else{
-			m_vertexBuffer[i+0].y -= dy;
-			m_vertexBuffer[i+1].y -= dy;
-			m_vertexBuffer[i+2].y -= dy;
-			m_vertexBuffer[i+3].y -= dy;
+			m_vertexBuffer[i+0].y += dy;
+			m_vertexBuffer[i+1].y += dy;
+			m_vertexBuffer[i+2].y += dy;
+			m_vertexBuffer[i+3].y += dy;
 		}
     }
 }

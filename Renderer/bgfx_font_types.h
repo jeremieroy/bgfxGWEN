@@ -129,11 +129,20 @@ namespace bgfx_font
 		/// used to increment the pen position when the glyph is drawn as part of a string of text.
 		int16_t advance_y;
 
-		/// texture coordinates if glyph is in a texture alias
-		uint16_t texture_x;
+		/// texture coordinates are expressed in a normalized ratio of the texture size 
+		/// that map [0,width] and  [0,height]  to [0;32767]
 
-		/// texture coordinates if glyph is in a texture alias
-		uint16_t texture_y;
+		/// left texture coordinates 
+		int16_t texture_x0;
+
+		/// top texture coordinates 
+		int16_t texture_y0;
+
+		/// right texture coordinates 
+		int16_t texture_x1;
+
+		/// bottom texture coordinates 
+		int16_t texture_y1;
 		
 		/// TODO handle kerning		
 	};

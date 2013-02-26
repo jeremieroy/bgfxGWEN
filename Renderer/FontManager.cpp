@@ -53,13 +53,16 @@ TextureAtlasHandle FontManager::createTextureAtlas(TextureType type, uint16_t wi
 	uint8_t buffer[4*4*4];
 	memset( buffer, 255, 4 * 4 * 4);
 	
-	uint16_t x,y;
-	assert( addBitmap(m_atlas[atlasIdx], 4, 4, buffer, x, y ) );
+	//TODO use a glyph -_-
+	GlyphInfo glyph;
+	glyph.width=4;
+	glyph.height=4;
+	assert( addBitmap(m_atlas[atlasIdx], glyph, buffer) );
 		
-	m_atlas[atlasIdx].m_black_x0 = x;
-	m_atlas[atlasIdx].m_black_y0 = y;
-	m_atlas[atlasIdx].m_black_x1 = x+4;
-	m_atlas[atlasIdx].m_black_y1 = y+4;	
+	m_atlas[atlasIdx].m_black_x0 = glyph.texture_x0;
+	m_atlas[atlasIdx].m_black_y0 = glyph.texture_y0;
+	m_atlas[atlasIdx].m_black_x1 = glyph.texture_x1;
+	m_atlas[atlasIdx].m_black_y1 = glyph.texture_y1;
 
 	return TextureAtlasHandle(atlasIdx);
 }
@@ -332,7 +335,7 @@ bool FontManager::preloadGlyph(FontHandle handle, const wchar_t* _string)
 			};
 
 			//copy bitmap to texture
-			if(!addBitmap(textureAtlas, glyphInfo.width, glyphInfo.height, m_buffer, glyphInfo.texture_x, glyphInfo.texture_y ) )
+			if(!addBitmap(textureAtlas, glyphInfo, m_buffer) )
 			{
 				return false;
 			}
@@ -387,7 +390,7 @@ bool FontManager::preloadGlyph(FontHandle handle, CodePoint_t codePoint)
 		};
 
 		//copy bitmap to texture
-		if(!addBitmap(textureAtlas, glyphInfo.width, glyphInfo.height, m_buffer, glyphInfo.texture_x, glyphInfo.texture_y ) )
+		if(!addBitmap(textureAtlas, glyphInfo, m_buffer) )
 		{
 			return false;
 		}
@@ -456,18 +459,32 @@ void FontManager::destroyTexture(bgfx::TextureHandle handle)
 	bgfx::destroyTexture(handle);
 }
 
-bool FontManager::addBitmap(TextureAtlas& atlas, uint16_t width, uint16_t height, const uint8_t* data, uint16_t& x, uint16_t& y)
+bool FontManager::addBitmap(TextureAtlas& atlas, GlyphInfo& glyphInfo, const uint8_t* data)
 {	
+	uint16_t x,y;
 	// We want each bitmap to be separated by at least one black pixel
-	if(!atlas.rectanglePacker.addRectangle(width + 1, height + 1,  x, y))
+	if(!atlas.rectanglePacker.addRectangle(glyphInfo.width + 1, glyphInfo.height + 1,  x, y))
 	{
 		return false;
 	}
 
 	//this allocation could maybe be avoided, will see later
-	const bgfx::Memory* mem = bgfx::alloc(width*height*atlas.depth);
-	memcpy(mem->data, data, width*height*atlas.depth);	
-	bgfx::updateTexture2D(atlas.textureHandle, 0, x, y, width, height, mem);
+	const bgfx::Memory* mem = bgfx::alloc(glyphInfo.width*glyphInfo.height*atlas.depth);
+	memcpy(mem->data, data, glyphInfo.width*glyphInfo.height*atlas.depth);	
+	bgfx::updateTexture2D(atlas.textureHandle, 0, x, y, glyphInfo.width, glyphInfo.height, mem);
+
+	glyphInfo.texture_x0 = x;
+	glyphInfo.texture_y0 = y;
+	glyphInfo.texture_x1 = x+glyphInfo.width;
+	glyphInfo.texture_y1 = y+glyphInfo.height;
+	
+	float texMultX = 32767.0f / (float) (atlas.width);
+	float texMultY = 32767.0f / (float) (atlas.height);
+	glyphInfo.texture_x0 = (int16_t)ceil(glyphInfo.texture_x0 * texMultX);
+	glyphInfo.texture_y0 = (int16_t)ceil(glyphInfo.texture_y0 * texMultY);
+	glyphInfo.texture_x1 = (int16_t)ceil(glyphInfo.texture_x1 * texMultX);
+	glyphInfo.texture_y1 = (int16_t)ceil(glyphInfo.texture_y1 * texMultY);
+
 	return true;
 }
 
