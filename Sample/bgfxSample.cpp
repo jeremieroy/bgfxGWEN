@@ -298,7 +298,7 @@ int _main_(int _argc, char** _argv)
 		bgfx_font::submitTextBuffer(staticText, 0);	
 		
 		bgfx_font::clearTextBuffer(transientText);
-		bgfx_font::setPenPosition(transientText, 100.0f + cos(time)*10.0f, 100.0f + sin(time) *10.0f);
+		bgfx_font::setPenPosition(transientText, 100.0f + cos(time)*15.0f, 400.0f + sin(time) *15.0f);
 		
 		uint32_t r = (uint32_t) (128.0f * ( 1.0f + cos ( time * 0.3f) )) ;
 		uint32_t g = (uint32_t) (128.0f * ( 1.0f + cos ( time * 0.5f ) )) ;
@@ -313,6 +313,7 @@ int _main_(int _argc, char** _argv)
         // Advance to next frame. Rendering thread will be kicked to 
 		// process submitted rendering primitives.
 		bgfx::frame();
+		Sleep(1);
 	}
 
 	bgfx::destroyIndexBuffer(ibh);

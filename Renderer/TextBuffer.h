@@ -26,7 +26,7 @@ public:
 	void setUnderlineColor(uint32_t rgba = 0x000000FF) { m_underlineColor = toABGR(rgba); }
 	void setStrikeThroughColor(uint32_t rgba = 0x000000FF) { m_strikeThroughColor = toABGR(rgba); }
 	
-	void setPenPosition(float x, float y) { m_penX = x; (int16_t)m_penY = y; }
+	void setPenPosition(float x, float y) { m_penX = x; m_penY = y; }
 
 	/// append an ASCII/utf-8 string to the buffer using current pen position and color
 	void appendText(FontHandle fontHandle, const char * _string);
@@ -82,7 +82,7 @@ private:
 
 	//position states	
 	float m_penX;
-	int16_t m_penY;
+	float m_penY;
 
 	float m_originX;
 	float m_originY;	
