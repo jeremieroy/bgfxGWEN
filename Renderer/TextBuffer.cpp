@@ -212,7 +212,7 @@ void TextBuffer::appendGlyph(CodePoint_t codePoint, const FontInfo& font, const 
 	
 	if( m_styleFlags & STYLE_BACKGROUND && m_backgroundColor & 0xFF000000)
 	{
-		int16_t x0 = ceil( m_penX - kerning );
+		int16_t x0 = floor( m_penX - kerning );
 		int16_t y0 = ( m_penY  - m_lineAscender);
 		int16_t x1 = (int16_t)ceil( (float)x0 + (glyphInfo.advance_x) * font.scale);
 		int16_t y1 = (int16_t)( m_penY - m_lineDescender + m_lineGap );
@@ -238,10 +238,88 @@ void TextBuffer::appendGlyph(CodePoint_t codePoint, const FontInfo& font, const 
 	}
 
 	// TODO handle underline
+	if( m_styleFlags & STYLE_UNDERLINE && m_underlineColor & 0xFF000000)
+	{
+		int16_t x0 = floor( m_penX - kerning );
+		int16_t y0 = (int16_t)ceil(m_penY - m_lineDescender/2 );
+		int16_t x1 = (int16_t)ceil( (float)x0 + (glyphInfo.advance_x) * font.scale);
+		int16_t y1 = y0+font.underline_thickness;
+
+		int16_t s0 = m_black_x0;
+		int16_t t0 = m_black_y0;
+		int16_t s1 = m_black_x1;
+		int16_t t1 = m_black_y1;
+
+		setVertex(m_vertexCount+0, x0, y0, s0, t0, m_underlineColor,STYLE_BACKGROUND);
+		setVertex(m_vertexCount+1, x0, y1, s0, t1, m_underlineColor,STYLE_BACKGROUND);
+		setVertex(m_vertexCount+2, x1, y1, s1, t1, m_underlineColor,STYLE_BACKGROUND);
+		setVertex(m_vertexCount+3, x1, y0, s1, t0, m_underlineColor,STYLE_BACKGROUND);
+
+		m_indexBuffer[m_indexCount + 0] = m_vertexCount+0;
+		m_indexBuffer[m_indexCount + 1] = m_vertexCount+1;
+		m_indexBuffer[m_indexCount + 2] = m_vertexCount+2;
+		m_indexBuffer[m_indexCount + 3] = m_vertexCount+0;
+		m_indexBuffer[m_indexCount + 4] = m_vertexCount+2;
+		m_indexBuffer[m_indexCount + 5] = m_vertexCount+3;
+		m_vertexCount += 4;
+		m_indexCount += 6;
+	}
 	
 	// TODO handle overline
+	if( m_styleFlags & STYLE_OVERLINE && m_overlineColor & 0xFF000000)
+	{
+		int16_t x0 = floor( m_penX - kerning );
+		int16_t y0 = (int16_t)ceil(m_penY - font.ascender );
+		int16_t x1 = (int16_t)ceil( (float)x0 + (glyphInfo.advance_x) * font.scale);
+		int16_t y1 = y0+font.underline_thickness;
+
+		int16_t s0 = m_black_x0;
+		int16_t t0 = m_black_y0;
+		int16_t s1 = m_black_x1;
+		int16_t t1 = m_black_y1;
+
+		setVertex(m_vertexCount+0, x0, y0, s0, t0, m_overlineColor,STYLE_BACKGROUND);
+		setVertex(m_vertexCount+1, x0, y1, s0, t1, m_overlineColor,STYLE_BACKGROUND);
+		setVertex(m_vertexCount+2, x1, y1, s1, t1, m_overlineColor,STYLE_BACKGROUND);
+		setVertex(m_vertexCount+3, x1, y0, s1, t0, m_overlineColor,STYLE_BACKGROUND);
+
+		m_indexBuffer[m_indexCount + 0] = m_vertexCount+0;
+		m_indexBuffer[m_indexCount + 1] = m_vertexCount+1;
+		m_indexBuffer[m_indexCount + 2] = m_vertexCount+2;
+		m_indexBuffer[m_indexCount + 3] = m_vertexCount+0;
+		m_indexBuffer[m_indexCount + 4] = m_vertexCount+2;
+		m_indexBuffer[m_indexCount + 5] = m_vertexCount+3;
+		m_vertexCount += 4;
+		m_indexCount += 6;
+	}
 
 	// TODO handle strikethrough
+	if( m_styleFlags & STYLE_STRIKE_THROUGH && m_strikeThroughColor & 0xFF000000)
+	{
+ 		int16_t x0 = floor( m_penX - kerning );
+		int16_t y0 = (int16_t)ceil(m_penY - font.ascender/3 );
+		int16_t x1 = (int16_t)ceil( (float)x0 + (glyphInfo.advance_x) * font.scale);
+		int16_t y1 = y0+font.underline_thickness;
+
+		int16_t s0 = m_black_x0;
+		int16_t t0 = m_black_y0;
+		int16_t s1 = m_black_x1;
+		int16_t t1 = m_black_y1;
+
+		setVertex(m_vertexCount+0, x0, y0, s0, t0, m_strikeThroughColor,STYLE_BACKGROUND);
+		setVertex(m_vertexCount+1, x0, y1, s0, t1, m_strikeThroughColor,STYLE_BACKGROUND);
+		setVertex(m_vertexCount+2, x1, y1, s1, t1, m_strikeThroughColor,STYLE_BACKGROUND);
+		setVertex(m_vertexCount+3, x1, y0, s1, t0, m_strikeThroughColor,STYLE_BACKGROUND);
+
+		m_indexBuffer[m_indexCount + 0] = m_vertexCount+0;
+		m_indexBuffer[m_indexCount + 1] = m_vertexCount+1;
+		m_indexBuffer[m_indexCount + 2] = m_vertexCount+2;
+		m_indexBuffer[m_indexCount + 3] = m_vertexCount+0;
+		m_indexBuffer[m_indexCount + 4] = m_vertexCount+2;
+		m_indexBuffer[m_indexCount + 5] = m_vertexCount+3;
+		m_vertexCount += 4;
+		m_indexCount += 6;
+	}
 
 
 	//handle glyph
@@ -280,7 +358,7 @@ void TextBuffer::verticalCenterLastLine(int16_t dy, uint16_t top, uint16_t botto
 {	
 	for( size_t i=m_lineStartIndex; i < m_vertexCount; i+=4 )
     {	
-		if(m_styleBuffer[i] && STYLE_BACKGROUND)
+		if( m_styleBuffer[i] == STYLE_BACKGROUND)
 		{
 			m_vertexBuffer[i+0].y = top;
 			m_vertexBuffer[i+1].y = bottom;

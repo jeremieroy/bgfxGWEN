@@ -76,10 +76,10 @@ FontHandle createFontByPixelSize(TrueTypeHandle _handle, uint32_t _pixelSize, Fo
 	return (FontHandle) g_context->fontManager.createFontByPixelSize(_handle, _pixelSize, _fontType);
 }
 	
-FontHandle createFontByEmSize(TrueTypeHandle _handle, uint32_t _emSize, FontType _fontType)
+FontHandle createFontByEmSize(TrueTypeHandle _handle, uint32_t _pixelSize, FontType _fontType)
 {
 	assert(g_context != NULL && "Context not initialized. Call bgfx_text::init(); ");
-	return (FontHandle) g_context->fontManager.createFontByEmSize(_handle, _emSize, _fontType);
+	return (FontHandle) g_context->fontManager.createFontByEmSize(_handle, _pixelSize, _fontType);
 }
 
 FontHandle loadBakedFont(const char * _fontPath, const char * _fontName)

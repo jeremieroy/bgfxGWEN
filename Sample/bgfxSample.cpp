@@ -92,13 +92,13 @@ const uint16_t TW = 512;  //512.0f;
 const uint16_t TM = 32767;//512*50;//65535; //1.0f;
 static Vertex s_quadVertices[4] =
 {
-	{  0, TW,  0,  0, 1.0f, 1.0 ,1.0, 1.0f},
-	{ TW, TW, TM,  0, 1.0f, 1.0 ,1.0, 1.0f},
-	{  0,  0,  0, TM, 1.0f, 1.0 ,1.0, 1.0f},
-	{ TW,  0, TM, TM, 1.0f, 1.0 ,1.0, 1.0f}
+	{  0, 0,  0,  0, 1.0f, 1.0 ,1.0, 1.0f},
+	{  0, TW, 0,  TM, 1.0f, 1.0 ,1.0, 1.0f},
+	{ TW, TW, TM, TM, 1.0f, 1.0 ,1.0, 1.0f},
+	{ TW,  0, TM, 0, 1.0f, 1.0 ,1.0, 1.0f}
 };
 
-static uint16_t s_quadVerticesIdx[6] = { 0,2,1, 1,2,3 };
+static uint16_t s_quadVerticesIdx[6] = { 0,1,2,0,2,3 };
 
 int _main_(int _argc, char** _argv)
 {
@@ -213,29 +213,49 @@ int _main_(int _argc, char** _argv)
 	// destroyed.
 	bgfx::destroyVertexShader(vsh);
 	bgfx::destroyFragmentShader(fsh);
-	
+		
 	bgfx_font::TextBufferHandle staticText = bgfx_font::createTextBuffer(bgfx_font::FONT_TYPE_ALPHA, bgfx_font::STATIC);
 	
 	//the pen position represent the top left of the box of the first line of text
-	bgfx_font::setPenPosition(staticText, 10.0f,10.0f);
-	bgfx_font::setTextBackgroundColor(staticText, 0xE0A7B255);
+	bgfx_font::setPenPosition(staticText, 550.0f,10.0f);
+	
+	bgfx_font::setTextBackgroundColor(staticText, 0xDDDDDD55);
+	bgfx_font::setUnderlineColor(staticText, 0xFF222255);
+	bgfx_font::setOverlineColor(staticText, 0x2222FF55);
+	bgfx_font::setStrikeThroughColor(staticText, 0x22FF2255);
+	
 	for(size_t i = 0; i< fonts.size(); ++i)
-	{	
-		if(i&1)
+	{
+		uint32_t style = bgfx_font::STYLE_NORMAL;
+		
+		//if((i&1) == 1)
 		{
-			bgfx_font::setTextStyle(staticText, bgfx_font::STYLE_BACKGROUND);			
-		}else
+			//style|=bgfx_font::STYLE_BACKGROUND;
+		}
+		//if((i&2) == 2)
 		{
-			bgfx_font::setTextStyle(staticText, bgfx_font::STYLE_NORMAL);
+			style|=bgfx_font::STYLE_OVERLINE;
 		}
 
+		//if((i&3) == 3)
+		{
+			style|=bgfx_font::STYLE_UNDERLINE;
+		}
+		
+		//if((i&4) == 4)
+		{
+			style|=bgfx_font::STYLE_STRIKE_THROUGH;
+		}
+
+		bgfx_font::setTextStyle(staticText, style);
+
 		//test vertical alignment
-		//bgfx_font::appendText(staticText, fonts[i], L"AgThJkmlj");
-		bgfx_font::appendText(staticText, fonts[i], L"The quick brown fox jumps over the lazy dog\n");
+		bgfx_font::appendText(staticText, fonts[i], L"AgThJkmlj");
+		//bgfx_font::appendText(staticText, fonts[i], L"The quick brown fox jumps over the lazy dog\n");
 	}
 	
 	bgfx_font::TextBufferHandle transientText = bgfx_font::createTextBuffer(bgfx_font::FONT_TYPE_ALPHA, bgfx_font::TRANSIENT);	
-	bgfx_font::setPenPosition(transientText, 100.0f,100.0f);
+	bgfx_font::setPenPosition(transientText, 100.0f,600.0f);
 		
 	float ra = 0, rb=0, rg=0;
     while (!processEvents(width, height, debug, reset) )
@@ -263,8 +283,8 @@ int _main_(int _argc, char** _argv)
 		//bgfx::dbgTextPrintf(0, 3, 0x0f, "Frame: % 7.3f[ms]", double(frameTime)*toMs);
 
 		
-		float at[3] = { -10.0f, -10.0f, 0.0f };
-		float eye[3] = {-10.0f, -10.0f, -1.0f };
+		float at[3] = { 0, 0, 0.0f };
+		float eye[3] = {0, 0, -1.0f };
 		
 		float view[16];
 		float proj[16];
@@ -274,7 +294,7 @@ int _main_(int _argc, char** _argv)
 		// Set view and projection matrix for view 0.
 		bgfx::setViewTransform(0, view, proj);
 
-		/*
+		
 		// Set vertex and fragment shaders.
 		bgfx::setProgram(program);
 
@@ -286,14 +306,14 @@ int _main_(int _argc, char** _argv)
 
 		bgfx::setState( BGFX_STATE_RGB_WRITE
 				|BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_SRC_ALPHA, BGFX_STATE_BLEND_INV_SRC_ALPHA)
-				//|BGFX_STATE_ALPHA_TEST
-				|BGFX_STATE_DEPTH_WRITE
-				|BGFX_STATE_DEPTH_TEST_LESS
+				|BGFX_STATE_ALPHA_TEST
+				//|BGFX_STATE_DEPTH_WRITE
+				//|BGFX_STATE_DEPTH_TEST_LESS
 				);
 
 		// Submit primitive for rendering to view 0.
 		bgfx::submit(0);
-		*/
+		
 		
 		bgfx_font::submitTextBuffer(staticText, 0);	
 		
@@ -313,7 +333,8 @@ int _main_(int _argc, char** _argv)
         // Advance to next frame. Rendering thread will be kicked to 
 		// process submitted rendering primitives.
 		bgfx::frame();
-		Sleep(1);
+		//just to prevent my CG Fan to howl
+		Sleep(2);
 	}
 
 	bgfx::destroyIndexBuffer(ibh);

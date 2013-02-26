@@ -25,20 +25,20 @@ namespace bgfx_font
 	/// destroy a texture atlas an the associated bgfx texture
 	void destroyTextureAtlas(TextureAtlasHandle _handle);
 		
-	/// Load a truetype ressource from a file, glyph can be generated if the font is loaded
+	/// Load a truetype resource from a file, glyph can be generated if the font is loaded
 	TrueTypeHandle loadTrueTypeFont(const char * _fontPath);
 	
-	/// Load a truetype ressource from a buffer, glyph can be generated if the font is loaded
+	/// Load a truetype resource from a buffer, glyph can be generated if the font is loaded
 	TrueTypeHandle loadTrueTypeFont(const bgfx::Memory* _mem);
 	
-	/// free the ressource allocated for the font (but keep loaded glyphs)
+	/// free the resource allocated for the font (but keep loaded glyphs)
 	void unloadTrueTypeFont(TrueTypeHandle _handle);
 		
 	/// return a font descriptor to a truetype font whose height is a fixed pixel size	
 	FontHandle createFontByPixelSize(TrueTypeHandle _handle, uint32_t _pixelSize, FontType _fontType = FONT_TYPE_ALPHA);
 	
-	/// return a font descriptor to a truetype font whose height is a fixed em size
-	FontHandle createFontByEmSize(TrueTypeHandle _handle, uint32_t _emSize, FontType _fontType = FONT_TYPE_ALPHA);
+	/// return a font descriptor to a truetype font whose height is a fixed pixel size using em mapping
+	FontHandle createFontByEmSize(TrueTypeHandle _handle, uint32_t _pixelSize, FontType _fontType = FONT_TYPE_ALPHA);
 
 	/// Load a baked font and return a font descriptor corresponding to a baked font
 	FontHandle loadBakedFont(const char * _fontPath, const char * _fontName);

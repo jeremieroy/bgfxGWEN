@@ -1,6 +1,6 @@
 #include <assert.h>
 #include "FontManager.h"
-
+#include <math.h>
 #define BGFX_FONT_ASSERT(cond, message) assert((cond) && (message));
 
 namespace bgfx_font
@@ -55,8 +55,8 @@ TextureAtlasHandle FontManager::createTextureAtlas(TextureType type, uint16_t wi
 	
 	//TODO use a glyph -_-
 	GlyphInfo glyph;
-	glyph.width=4;
-	glyph.height=4;
+	glyph.width=1;
+	glyph.height=1;
 	assert( addBitmap(m_atlas[atlasIdx], glyph, buffer) );
 		
 	m_atlas[atlasIdx].m_black_x0 = glyph.texture_x0;
@@ -227,7 +227,7 @@ FontHandle FontManager::createFontByPixelSize(TrueTypeHandle handle, uint32_t pi
 	return FontHandle(fontIdx);
 }
 	
-FontHandle FontManager::createFontByEmSize(TrueTypeHandle handle, uint32_t emSize, FontType fontType)
+FontHandle FontManager::createFontByEmSize(TrueTypeHandle handle, uint32_t pixelSize, FontType fontType)
 {
 	assert(handle.isValid());
 	uint16_t fileIdx = m_filesHandles.getHandleAt(handle.idx);
@@ -260,7 +260,7 @@ FontHandle FontManager::createFontByEmSize(TrueTypeHandle handle, uint32_t emSiz
 	assert(fontIdx != bx::HandleAlloc::invalid);
 
 	m_cachedFonts[fontIdx].trueTypeFont = m_cachedFiles[fileIdx].trueType;
-	m_cachedFonts[fontIdx].fontInfo = m_cachedFonts[fontIdx].trueTypeFont->getFontInfoByEmSize((float) emSize);
+	m_cachedFonts[fontIdx].fontInfo = m_cachedFonts[fontIdx].trueTypeFont->getFontInfoByEmSize((float) pixelSize);
 	m_cachedFonts[fontIdx].fontInfo.fontType = fontType;
 	m_cachedFonts[fontIdx].fontInfo.textureAtlas = TextureAtlasHandle(texHandles[texIdx]);
 	m_cachedFonts[fontIdx].cachedGlyphs.clear();
@@ -440,7 +440,7 @@ bgfx::TextureHandle FontManager::createTexture(TextureType textureType, uint16_t
 	//const bgfx::Memory* mem = bgfx::alloc(width*height);
 	//memset(mem->data, 255, mem->size);
 	const bgfx::Memory* mem = NULL;
-	uint32_t flags = BGFX_TEXTURE_MIN_POINT|BGFX_TEXTURE_MAG_POINT| BGFX_TEXTURE_MIP_POINT|BGFX_TEXTURE_U_CLAMP|BGFX_TEXTURE_V_CLAMP;
+	uint32_t flags = BGFX_TEXTURE_MIN_POINT|BGFX_TEXTURE_MAG_POINT|BGFX_TEXTURE_MIP_POINT|BGFX_TEXTURE_U_CLAMP|BGFX_TEXTURE_V_CLAMP;
 	bgfx::TextureHandle handle;
 	switch(textureType)
 	{
@@ -480,10 +480,15 @@ bool FontManager::addBitmap(TextureAtlas& atlas, GlyphInfo& glyphInfo, const uin
 	
 	float texMultX = 32767.0f / (float) (atlas.width);
 	float texMultY = 32767.0f / (float) (atlas.height);
-	glyphInfo.texture_x0 = (int16_t)ceil(glyphInfo.texture_x0 * texMultX);
-	glyphInfo.texture_y0 = (int16_t)ceil(glyphInfo.texture_y0 * texMultY);
-	glyphInfo.texture_x1 = (int16_t)ceil(glyphInfo.texture_x1 * texMultX);
-	glyphInfo.texture_y1 = (int16_t)ceil(glyphInfo.texture_y1 * texMultY);
+	glyphInfo.texture_x0 = (int16_t)ceil((glyphInfo.texture_x0) * texMultX);
+	glyphInfo.texture_y0 = (int16_t)ceil((glyphInfo.texture_y0) * texMultY);
+	glyphInfo.texture_x1 = (int16_t)ceil((glyphInfo.texture_x1) * texMultX);
+	glyphInfo.texture_y1 = (int16_t)ceil((glyphInfo.texture_y1) * texMultY);
+
+	assert(((glyphInfo.texture_x0 * atlas.width)/32767) == x);
+	assert(((glyphInfo.texture_y0 * atlas.height)/32767) == y);
+	assert(((glyphInfo.texture_x1 * atlas.width)/32767) == x+glyphInfo.width);
+	assert(((glyphInfo.texture_y1 * atlas.height)/32767) == y+glyphInfo.height);
 
 	return true;
 }

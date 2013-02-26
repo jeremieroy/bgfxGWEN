@@ -35,7 +35,7 @@ bool TrueTypeFont::init(const uint8_t* buffer, uint32_t size, int32_t fontIndex)
 	return true;
 }
 
-FontInfo TrueTypeFont::getFontInfoByEmSize(float emSize)
+FontInfo TrueTypeFont::getFontInfoByEmSize(float pixelSize)
 {
 	assert(m_font != NULL && "TrueTypeFont not initialized" );
 	stbtt_fontinfo* fnt = (stbtt_fontinfo*)m_font;
@@ -43,14 +43,17 @@ FontInfo TrueTypeFont::getFontInfoByEmSize(float emSize)
 	int ascent, descent, lineGap;	
 	stbtt_GetFontVMetrics(fnt, &ascent, &descent, &lineGap);
 
-	float scale = stbtt_ScaleForMappingEmToPixels(fnt, emSize);	
+	float scale = stbtt_ScaleForMappingEmToPixels(fnt, pixelSize);	
 	
+	//Simply scaling the font ascent or descent might not give correct results. A possible solution is to keep the ceiling of the scaled ascent, and floor of the scaled descent.		
 	FontInfo outFontInfo;
 	outFontInfo.scale = scale;
 	outFontInfo.ascender = ceil(ascent*scale);
 	outFontInfo.descender = floor(descent*scale);
-	outFontInfo.lineGap = (lineGap*scale);
-	outFontInfo.underline_thickness = (int16_t) ceil((float)(outFontInfo.ascender-outFontInfo.descender) *0.1f );
+	outFontInfo.lineGap = ceil(lineGap*scale);
+	//using lineGap for thickness is pbly abusive but it seems to give good results so far
+	outFontInfo.underline_thickness = outFontInfo.lineGap;
+	if(outFontInfo.underline_thickness<1)outFontInfo.underline_thickness = 1;
 	return outFontInfo;
 }
 
@@ -63,15 +66,15 @@ FontInfo TrueTypeFont::getFontInfoByPixelSize(float pixelSize )
 	stbtt_GetFontVMetrics(fnt, &ascent, &descent, &lineGap);
 
 	float scale = stbtt_ScaleForPixelHeight(fnt, pixelSize);	
-	//Because of hinting, simply scaling the font ascent or descent might not give correct results. A possible solution is to keep the ceiling of the scaled ascent, and floor of the scaled descent.
-	//TODO: check this
-	
+	//Simply scaling the font ascent or descent might not give correct results. A possible solution is to keep the ceiling of the scaled ascent, and floor of the scaled descent.
 	FontInfo outFontInfo;
 	outFontInfo.scale = scale;
 	outFontInfo.ascender = ceil(ascent*scale);
 	outFontInfo.descender = floor(descent*scale);
 	outFontInfo.lineGap = ceil(lineGap*scale);
-	outFontInfo.underline_thickness = (int16_t) ceil((float)(outFontInfo.ascender-outFontInfo.descender) *0.1f );
+	//using lineGap for thickness is pbly abusive but it seems to give good results so far
+	outFontInfo.underline_thickness = outFontInfo.lineGap ;//(int16_t)(1.0f*scale );
+	if(outFontInfo.underline_thickness<1)outFontInfo.underline_thickness = 1;
 	return outFontInfo;
 }
 

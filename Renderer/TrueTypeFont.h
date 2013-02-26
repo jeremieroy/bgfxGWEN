@@ -17,11 +17,11 @@ public:
 	/// seems hacky :s
 	bool isValid() { return m_font!=NULL; }
 
-	/// return a font descriptor for a given pixelSize
+	/// return a font descriptor for a given pixel size
 	FontInfo getFontInfoByPixelSize(float pixelSize);
 
 	/// return a font descriptor for a given em pixelSize
-	FontInfo getFontInfoByEmSize(float emSize);
+	FontInfo getFontInfoByEmSize(float pixelSize);
 
 	/// return the details of a glyph
 	/// return false if the glyph couldn't be found

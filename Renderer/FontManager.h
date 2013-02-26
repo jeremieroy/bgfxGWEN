@@ -79,8 +79,8 @@ public:
 	/// return a font descriptor whose height is a fixed pixel size	
 	FontHandle createFontByPixelSize(TrueTypeHandle handle, uint32_t pixelSize, FontType fontType = FONT_TYPE_ALPHA);
 	
-	/// return a font descriptor whose height is a fiex em size
-	FontHandle createFontByEmSize(TrueTypeHandle handle, uint32_t emSize, FontType fontType = FONT_TYPE_ALPHA);
+	/// return a font descriptor whose height is a fixed pixel size using em mapping
+	FontHandle createFontByEmSize(TrueTypeHandle handle, uint32_t pixelSize, FontType fontType = FONT_TYPE_ALPHA);
 		
 	/// load a baked font (the set of glyph is fixed)
 	/// @return INVALID_HANDLE if the loading fail
