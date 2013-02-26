@@ -330,6 +330,9 @@ bool FontManager::preloadGlyph(FontHandle handle, const wchar_t* _string)
 			case FONT_TYPE_ALPHA:
 				font.trueTypeFont->bakeGlyphAlpha(fontInfo, glyphInfo, m_buffer);
 				break;
+			case FONT_TYPE_DISTANCE:
+				font.trueTypeFont->bakeGlyphDistance(fontInfo, glyphInfo, m_buffer);
+				break;
 			default:
 				assert(false && "TextureType not supported yet");
 			};
@@ -384,6 +387,9 @@ bool FontManager::preloadGlyph(FontHandle handle, CodePoint_t codePoint)
 		{
 		case FONT_TYPE_ALPHA:
 			font.trueTypeFont->bakeGlyphAlpha(fontInfo, glyphInfo, m_buffer);
+			break;
+		case FONT_TYPE_DISTANCE:
+			font.trueTypeFont->bakeGlyphDistance(fontInfo, glyphInfo, m_buffer);
 			break;
 		default:
 			assert(false && "TextureType not supported yet");

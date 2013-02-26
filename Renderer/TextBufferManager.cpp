@@ -70,10 +70,19 @@ void TextBufferManager::init(FontManager* fontManager, const char* shaderPath)
 	bgfx::VertexShaderHandle vsh = bgfx::createVertexShader(mem);
 	mem = loadShader(shaderPath, "fs_font_basic");
 	bgfx::FragmentShaderHandle fsh = bgfx::createFragmentShader(mem);
-	
 	m_basicProgram = bgfx::createProgram(vsh, fsh);
 	bgfx::destroyVertexShader(vsh);
 	bgfx::destroyFragmentShader(fsh);
+
+	mem = loadShader(shaderPath, "vs_font_distance_field");
+	vsh = bgfx::createVertexShader(mem);
+	mem = loadShader(shaderPath, "fs_font_distance_field");
+	fsh = bgfx::createFragmentShader(mem);
+	m_distanceProgram = bgfx::createProgram(vsh, fsh);
+	bgfx::destroyVertexShader(vsh);
+	bgfx::destroyFragmentShader(fsh);
+
+	
 }
 
 TextBufferHandle TextBufferManager::createTextBuffer(FontType _type, BufferType bufferType)
@@ -136,7 +145,16 @@ void TextBufferManager::submitTextBuffer(TextBufferHandle _handle, uint8_t _id, 
 	size_t vertexSize = bc.textBuffer.getVertexCount() * bc.textBuffer.getVertexSize();
 	const bgfx::Memory* mem;	
 
-	bgfx::setProgram(m_basicProgram);
+	if(bc.fontType==FONT_TYPE_DISTANCE)
+	{
+		bgfx::setProgram(m_distanceProgram);
+	}else
+	{
+		bgfx::setProgram(m_basicProgram);
+	}
+
+	
+	
 
 	bgfx::setTexture(0, m_u_texColor, bc.textBuffer.getTextureHandle() );
 

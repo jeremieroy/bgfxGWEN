@@ -35,6 +35,8 @@ public:
 	/// @ remark buffer min size: glyphInfo.width * glyphInfo * height * sizeof(uint32_t)
     void bakeGlyphHinted(const FontInfo& fontInfo, const GlyphInfo& glyphInfo, uint32_t* outBuffer);
 
+	void bakeGlyphDistance(const FontInfo& fontInfo, const GlyphInfo& glyphInfo, uint8_t* outBuffer);
+
 private:
 	void* m_font;
 };

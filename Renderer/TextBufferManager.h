@@ -39,6 +39,7 @@ private:
 	bgfx::UniformHandle m_u_texColor;
 	//shaders program
 	bgfx::ProgramHandle m_basicProgram;
+	bgfx::ProgramHandle m_distanceProgram;
 };
 
 }

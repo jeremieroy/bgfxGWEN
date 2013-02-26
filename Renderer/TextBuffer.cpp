@@ -236,8 +236,7 @@ void TextBuffer::appendGlyph(CodePoint_t codePoint, const FontInfo& font, const 
 		m_vertexCount += 4;
 		m_indexCount += 6;
 	}
-
-	// TODO handle underline
+		
 	if( m_styleFlags & STYLE_UNDERLINE && m_underlineColor & 0xFF000000)
 	{
 		int16_t x0 = floor( m_penX - kerning );
@@ -250,10 +249,10 @@ void TextBuffer::appendGlyph(CodePoint_t codePoint, const FontInfo& font, const 
 		int16_t s1 = m_black_x1;
 		int16_t t1 = m_black_y1;
 
-		setVertex(m_vertexCount+0, x0, y0, s0, t0, m_underlineColor,STYLE_BACKGROUND);
-		setVertex(m_vertexCount+1, x0, y1, s0, t1, m_underlineColor,STYLE_BACKGROUND);
-		setVertex(m_vertexCount+2, x1, y1, s1, t1, m_underlineColor,STYLE_BACKGROUND);
-		setVertex(m_vertexCount+3, x1, y0, s1, t0, m_underlineColor,STYLE_BACKGROUND);
+		setVertex(m_vertexCount+0, x0, y0, s0, t0, m_underlineColor,STYLE_UNDERLINE);
+		setVertex(m_vertexCount+1, x0, y1, s0, t1, m_underlineColor,STYLE_UNDERLINE);
+		setVertex(m_vertexCount+2, x1, y1, s1, t1, m_underlineColor,STYLE_UNDERLINE);
+		setVertex(m_vertexCount+3, x1, y0, s1, t0, m_underlineColor,STYLE_UNDERLINE);
 
 		m_indexBuffer[m_indexCount + 0] = m_vertexCount+0;
 		m_indexBuffer[m_indexCount + 1] = m_vertexCount+1;
@@ -265,7 +264,6 @@ void TextBuffer::appendGlyph(CodePoint_t codePoint, const FontInfo& font, const 
 		m_indexCount += 6;
 	}
 	
-	// TODO handle overline
 	if( m_styleFlags & STYLE_OVERLINE && m_overlineColor & 0xFF000000)
 	{
 		int16_t x0 = floor( m_penX - kerning );
@@ -278,10 +276,10 @@ void TextBuffer::appendGlyph(CodePoint_t codePoint, const FontInfo& font, const 
 		int16_t s1 = m_black_x1;
 		int16_t t1 = m_black_y1;
 
-		setVertex(m_vertexCount+0, x0, y0, s0, t0, m_overlineColor,STYLE_BACKGROUND);
-		setVertex(m_vertexCount+1, x0, y1, s0, t1, m_overlineColor,STYLE_BACKGROUND);
-		setVertex(m_vertexCount+2, x1, y1, s1, t1, m_overlineColor,STYLE_BACKGROUND);
-		setVertex(m_vertexCount+3, x1, y0, s1, t0, m_overlineColor,STYLE_BACKGROUND);
+		setVertex(m_vertexCount+0, x0, y0, s0, t0, m_overlineColor,STYLE_OVERLINE);
+		setVertex(m_vertexCount+1, x0, y1, s0, t1, m_overlineColor,STYLE_OVERLINE);
+		setVertex(m_vertexCount+2, x1, y1, s1, t1, m_overlineColor,STYLE_OVERLINE);
+		setVertex(m_vertexCount+3, x1, y0, s1, t0, m_overlineColor,STYLE_OVERLINE);
 
 		m_indexBuffer[m_indexCount + 0] = m_vertexCount+0;
 		m_indexBuffer[m_indexCount + 1] = m_vertexCount+1;
@@ -292,8 +290,7 @@ void TextBuffer::appendGlyph(CodePoint_t codePoint, const FontInfo& font, const 
 		m_vertexCount += 4;
 		m_indexCount += 6;
 	}
-
-	// TODO handle strikethrough
+		
 	if( m_styleFlags & STYLE_STRIKE_THROUGH && m_strikeThroughColor & 0xFF000000)
 	{
  		int16_t x0 = floor( m_penX - kerning );
@@ -306,10 +303,10 @@ void TextBuffer::appendGlyph(CodePoint_t codePoint, const FontInfo& font, const 
 		int16_t s1 = m_black_x1;
 		int16_t t1 = m_black_y1;
 
-		setVertex(m_vertexCount+0, x0, y0, s0, t0, m_strikeThroughColor,STYLE_BACKGROUND);
-		setVertex(m_vertexCount+1, x0, y1, s0, t1, m_strikeThroughColor,STYLE_BACKGROUND);
-		setVertex(m_vertexCount+2, x1, y1, s1, t1, m_strikeThroughColor,STYLE_BACKGROUND);
-		setVertex(m_vertexCount+3, x1, y0, s1, t0, m_strikeThroughColor,STYLE_BACKGROUND);
+		setVertex(m_vertexCount+0, x0, y0, s0, t0, m_strikeThroughColor,STYLE_STRIKE_THROUGH);
+		setVertex(m_vertexCount+1, x0, y1, s0, t1, m_strikeThroughColor,STYLE_STRIKE_THROUGH);
+		setVertex(m_vertexCount+2, x1, y1, s1, t1, m_strikeThroughColor,STYLE_STRIKE_THROUGH);
+		setVertex(m_vertexCount+3, x1, y0, s1, t0, m_strikeThroughColor,STYLE_STRIKE_THROUGH);
 
 		m_indexBuffer[m_indexCount + 0] = m_vertexCount+0;
 		m_indexBuffer[m_indexCount + 1] = m_vertexCount+1;
