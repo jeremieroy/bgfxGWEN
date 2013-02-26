@@ -118,7 +118,8 @@ int _main_(int _argc, char** _argv)
 	// Set view 0 clear state.
 	bgfx::setViewClear(0
 		, BGFX_CLEAR_COLOR_BIT|BGFX_CLEAR_DEPTH_BIT
-		, 0x303030ff
+		//, 0x303030ff
+		, 0x000000ff
 		, 1.0f
 		, 0
 		);
@@ -157,11 +158,11 @@ int _main_(int _argc, char** _argv)
 
 	
 	std::vector<bgfx_font::FontHandle> fonts;
-	for(int i = 12; i < 36; i+=2)
+	for(int i = 50; i < 52; i+=4)
 	{		
 		//instantiate a usable font
 		//bgfx_font::FontHandle font = bgfx_font::createFontByEmSize(times_tt, i);
-		bgfx_font::FontHandle font = bgfx_font::createFontByPixelSize(times_tt, i);
+		bgfx_font::FontHandle font = bgfx_font::createFontByEmSize(times_tt, i, bgfx_font::FONT_TYPE_DISTANCE);
 		//preload glyph and generate (generate bitmap's)
 		bgfx_font::preloadGlyph(font, L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ. \n");
 		fonts.push_back(font);
@@ -214,7 +215,7 @@ int _main_(int _argc, char** _argv)
 	bgfx::destroyVertexShader(vsh);
 	bgfx::destroyFragmentShader(fsh);
 		
-	bgfx_font::TextBufferHandle staticText = bgfx_font::createTextBuffer(bgfx_font::FONT_TYPE_ALPHA, bgfx_font::STATIC);
+	bgfx_font::TextBufferHandle staticText = bgfx_font::createTextBuffer(bgfx_font::FONT_TYPE_DISTANCE, bgfx_font::STATIC);
 	
 	//the pen position represent the top left of the box of the first line of text
 	bgfx_font::setPenPosition(staticText, 550.0f,10.0f);
@@ -230,27 +231,28 @@ int _main_(int _argc, char** _argv)
 		
 		//if((i&1) == 1)
 		{
-			//style|=bgfx_font::STYLE_BACKGROUND;
+		//	style|=bgfx_font::STYLE_BACKGROUND;
 		}
 		//if((i&2) == 2)
 		{
-			style|=bgfx_font::STYLE_OVERLINE;
+			//style|=bgfx_font::STYLE_OVERLINE;
 		}
 
 		//if((i&3) == 3)
 		{
-			style|=bgfx_font::STYLE_UNDERLINE;
+			//style|=bgfx_font::STYLE_UNDERLINE;
 		}
 		
 		//if((i&4) == 4)
 		{
-			style|=bgfx_font::STYLE_STRIKE_THROUGH;
+			//style|=bgfx_font::STYLE_STRIKE_THROUGH;
 		}
 
 		bgfx_font::setTextStyle(staticText, style);
 
 		//test vertical alignment
-		bgfx_font::appendText(staticText, fonts[i], L"AgThJkmlj");
+		//bgfx_font::appendText(staticText, fonts[i], L"Distance Field rendering");
+		bgfx_font::appendText(staticText, fonts[i], L"Distance Field rendering");
 		//bgfx_font::appendText(staticText, fonts[i], L"The quick brown fox jumps over the lazy dog\n");
 	}
 	
@@ -326,7 +328,7 @@ int _main_(int _argc, char** _argv)
 		uint32_t rgba = r << 24 | g << 16 | b<<8 | 255 ;
 
 		bgfx_font::setTextColor(transientText, rgba);
-		bgfx_font::appendText(transientText, calibriFont, "SubPixel rendering is in my todo list.");
+		//bgfx_font::appendText(transientText, calibriFont, "SubPixel rendering is in my todo list.");
 		::bgfx_font::submitTextBuffer(transientText, 0);
 		
 
