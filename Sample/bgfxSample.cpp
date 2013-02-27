@@ -158,11 +158,11 @@ int _main_(int _argc, char** _argv)
 
 	
 	std::vector<bgfx_font::FontHandle> fonts;
-	for(int i = 50; i < 52; i+=4)
+	for(int i = 14; i < 30; i+=4)
 	{		
 		//instantiate a usable font
 		//bgfx_font::FontHandle font = bgfx_font::createFontByEmSize(times_tt, i);
-		bgfx_font::FontHandle font = bgfx_font::createFontByEmSize(times_tt, i, bgfx_font::FONT_TYPE_DISTANCE);
+		bgfx_font::FontHandle font = bgfx_font::createFontByPixelSize(times_tt, i, bgfx_font::FONT_TYPE_DISTANCE);
 		//preload glyph and generate (generate bitmap's)
 		bgfx_font::preloadGlyph(font, L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ. \n");
 		fonts.push_back(font);
@@ -252,7 +252,7 @@ int _main_(int _argc, char** _argv)
 
 		//test vertical alignment
 		//bgfx_font::appendText(staticText, fonts[i], L"Distance Field rendering");
-		bgfx_font::appendText(staticText, fonts[i], L"Distance Field rendering");
+		bgfx_font::appendText(staticText, fonts[i], L"abcdefghijklmnopqrstuvwxyz\nABCDEFGHIJKLMNOPQRSTUVWXYZ");
 		//bgfx_font::appendText(staticText, fonts[i], L"The quick brown fox jumps over the lazy dog\n");
 	}
 	
@@ -308,7 +308,7 @@ int _main_(int _argc, char** _argv)
 
 		bgfx::setState( BGFX_STATE_RGB_WRITE
 				|BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_SRC_ALPHA, BGFX_STATE_BLEND_INV_SRC_ALPHA)
-				|BGFX_STATE_ALPHA_TEST
+				//|BGFX_STATE_ALPHA_TEST
 				//|BGFX_STATE_DEPTH_WRITE
 				//|BGFX_STATE_DEPTH_TEST_LESS
 				);

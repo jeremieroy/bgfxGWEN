@@ -105,10 +105,26 @@ bool TrueTypeFont::getGlyphInfo(const FontInfo& fontInfo, CodePoint_t codePoint,
 	int16_t offset_y = y0;
 
 	outGlyphInfo.glyphIndex = glyphIndex;
-	outGlyphInfo.width = x1-x0;
-	outGlyphInfo.height = y1-y0;
-	outGlyphInfo.offset_x = offset_x;
-	outGlyphInfo.offset_y = offset_y;
+	if(fontInfo.fontType == FONT_TYPE_DISTANCE)
+	{
+		uint32_t w= x1-x0;
+		uint32_t h= y1-y0;
+		uint32_t dw = 6;
+		uint32_t dh = 6;
+		if(dw<2) dw = 2;
+		if(dh<2) dh = 2;
+		outGlyphInfo.width = w + dw*2;
+		outGlyphInfo.height = h + dh*2;
+		outGlyphInfo.offset_x = offset_x -dw;
+		outGlyphInfo.offset_y = offset_y-dh;
+	}else
+	{
+		outGlyphInfo.width = x1-x0;
+		outGlyphInfo.height = y1-y0;
+		outGlyphInfo.offset_x = offset_x;
+		outGlyphInfo.offset_y = offset_y;
+	}
+
 	outGlyphInfo.advance_x = advanceWidth;	
 	outGlyphInfo.advance_y = (fontInfo.ascender - fontInfo.descender + fontInfo.lineGap);
 	outGlyphInfo.texture_x0 = 0;
@@ -203,40 +219,36 @@ void TrueTypeFont::bakeGlyphDistance(const FontInfo& fontInfo, const GlyphInfo& 
 {
 	assert(m_font != NULL && "TrueTypeFont not initialized" );
 	stbtt_fontinfo* fnt = (stbtt_fontinfo*)m_font;
-	bakeGlyphAlpha(fontInfo, glyphInfo, outBuffer);
-	uint32_t w = glyphInfo.width;
-	uint32_t h = glyphInfo.height;
-	uint32_t bW = 32;
-	uint32_t bH = 32;
-	uint32_t buffSize = (w+bW) * (h+bH) * sizeof(uint8_t);
-	uint8_t * alphaImg = (uint8_t *)  malloc( buffSize );
-	uint8_t * alphaImg2 = (uint8_t *)  malloc( buffSize);
 	
-	memset(alphaImg, 0, buffSize);
-	memset(alphaImg2, 0, buffSize);
+	int x0, y0, x1, y1;
+	const float shift_x = 0;
+	const float shift_y = 0;
+	stbtt_GetGlyphBitmapBoxSubpixel(fnt, glyphInfo.glyphIndex, fontInfo.scale, fontInfo.scale, shift_x, shift_y, &x0,&y0,&x1,&y1);
+	uint32_t w= x1-x0;
+	uint32_t h= y1-y0;
+	stbtt_MakeGlyphBitmapSubpixel(fnt, outBuffer, w, h, w, fontInfo.scale, fontInfo.scale, shift_x, shift_y, glyphInfo.glyphIndex);
 	
-	for(int y=0;y<h; ++y)
+	uint32_t dw = 6;
+	uint32_t dh = 6;	
+	if(dw<2) dw = 2;
+	if(dh<2) dh = 2;
+	
+	uint32_t nw = w + dw*2;
+	uint32_t nh = h + dh*2;
+	assert(nw*nh < 128*128);
+	uint32_t buffSize = nw*nh*sizeof(uint8_t);
+	uint8_t * alphaImg = (uint8_t *)  malloc( buffSize );	
+	memset(alphaImg, 0, nw*nh*sizeof(uint8_t));
+
+	//move it
+	
+	for(uint32_t  i= dh; i< nh-dh; ++i)
 	{
-		for(int x=0;x<w; ++x)
-		{
-			alphaImg[ (y+bH/2)*(w+bW) + (x+bW/2)] = outBuffer[y*w+x] ;
-		}
+		memcpy(alphaImg+i*nw+dw, outBuffer+(i-dh)*w, w);
 	}
-
-	make_distance_map(alphaImg, alphaImg2, w+bW, h+bH);
-	//memcpy(outBuffer, alphaImg, w * h * sizeof(uint8_t) );
-
-		for(int y=0;y<h; ++y)
-		{
-			for(int x=0;x<w; ++x)
-			{
-				outBuffer[y*w+x]  = alphaImg2[ (y+bH/2)*(w+bW) + (x+bW/2)];
-			}
-		}
-
+	make_distance_map(alphaImg, outBuffer, nw, nh);
 
 	free(alphaImg);
-	free(alphaImg2);
 }
 
 }
